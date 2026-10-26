@@ -571,7 +571,9 @@ function u0PlaySymbol(symbol){
       u0SetStatus('This browser does not support speech. Use Chrome on your phone.');return;
     }
     const run=u0PlaybackNumber;
-    const say=new SpeechSynthesisUtterance('ah');
+    let say;
+    try{say=new SpeechSynthesisUtterance('ah')}
+    catch(e){u0SetStatus('Vowel voice unavailable. Try Test Sound or open in Chrome.');return}
     const voice=u0USVoice();if(voice)say.voice=voice;
     say.lang='en-US';say.rate=.78;say.volume=1;
     // Browser TTS is an English example, not approved CHamoru pronunciation.
