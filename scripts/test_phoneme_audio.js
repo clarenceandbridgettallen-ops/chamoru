@@ -129,3 +129,33 @@ test('new phoneme immediately cancels and settles the previous clip',async()=>{
   h.clips[1].onended();assert.equal(await newer,true);
   assert.ok(h.timers.every(t=>t.cleared));
 });
+
+const sequenceStart=html.indexOf('async function u0SaySequence(');
+const sequenceEnd=html.indexOf('function u0PlaySymbol(',sequenceStart);
+assert.ok(sequenceStart>=0&&sequenceEnd>sequenceStart,'guided audio sequence must exist');
+const sequenceSource=html.slice(sequenceStart,sequenceEnd);
+function sequenceHarness(clipWorks){
+  const statuses=[];
+  const ctx={
+    U0_PHONEME_AUDIO:{ts:'test:phoneme'},
+    u0PlaybackNumber:0,
+    u0StopSound:()=>{ctx.u0PlaybackNumber++},
+    u0SetStatus:msg=>statuses.push(msg),
+    u0PlayRecordedPhoneme:async()=>{if(!clipWorks)statuses.push('Sound stalled. Try Test Sound.');return clipWorks},
+    u0Breath:async()=>{},u0AmericanUtter:async()=>{},
+    window:{},setTimeout:fn=>{fn();return 1}
+  };
+  vm.createContext(ctx);vm.runInContext(sequenceSource,ctx);
+  return {statuses,run:()=>vm.runInContext("u0SaySequence(['ts'],'CH sound')",ctx)};
+}
+
+test('failed recorded phoneme does not falsely announce finished sequence',async()=>{
+  const h=sequenceHarness(false);await h.run();
+  assert.match(h.statuses.at(-1),/Sound stalled/);
+  assert.equal(h.statuses.some(x=>x.startsWith('Finished.')),false);
+});
+
+test('successful recorded phoneme may announce finished sequence',async()=>{
+  const h=sequenceHarness(true);await h.run();
+  assert.match(h.statuses.at(-1),/^Finished\./);
+});
