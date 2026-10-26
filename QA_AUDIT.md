@@ -1,5 +1,18 @@
 # CHamorU QA Audit
 
+## 2026-10-26 | Family Voice Studio v4.5 and randomized Unit 2 recall
+
+- RELEASE: Public CHamorU GitHub Pages website returned title `CHamorU · Private Voice Studio v4.5`; separate `voice-studio.js` URL also responded. This verifies deployment of source assets, **not** physical microphone/audio playback.
+- ADDED: `voice-studio.js` offline, private-by-default family audio recorder for 8 existing starter/family terms. Uses permission-gated MediaRecorder, browser IndexedDB blobs, replay, deletion with confirmation, and explicit voice-pack JSON export/import for consenting family use. No server API, paid dependencies, automatic uploading or unauthorized publication. Native speaker voice review remains a human step.
+- INTEGRATED: `index.html` routes Unit 1 learning/practice audio buttons through saved family recordings first, with existing provisional voice sources only when no recording exists. Family Voice Studio is accessible from Practice & Explore, Voice settings, and the greeting lesson. Navigation contains Back and an always-visible NEXT.
+- QUALITY: Unit 2 Family Words now shuffles question order and answer options per assessment attempt, counts only first submitted answers, requires 4/5 to pass, shows targeted meaning categories after all questions, and preserves old success/progress keys and one-time XP/shell rewards.
+- SAFETY & POLISH: A recording microphone session is limited to 20 seconds, audio export is opt-in only, recording is guarded against accidental nav-away and page unloading, interruption errors do not falsely claim a saved clip, and larger packs can export. User-facing lesson text now says listening is optional while family/native recordings are prepared; the outdated 'No public launch' footer is removed.
+- TESTS: 7/7 simulated voice-studio tests and 4/4 randomized family-word assessment tests passed in a V8 harness against exact repository source. Both test files were committed under `scripts/`, and audio-qa workflow was updated to invoke them alongside existing phoneme tests. The GitHub Actions result for these newest commits was **not** independently obtained; do not claim CI green based on the isolated tests.
+- COMMITS: voice studio `d1e1c7e`, integration `718e399`, Unit 2 randomization `6a9ee00`, tests `dd882a8` and `4c70a61`, safety `2ee0833`, lesson polish `4ddc26f`. See GitHub commit history for latest audit/workflow commits.
+- NOT VERIFIED: user-phone mic permissions, sound output from saved recordings or old MP3/TTS on Android, imported-file playback on a second device, and native CHamoru pronunciation. Existing English synthetic audio MUST remain provisional; never score language listening/speaking mastery based on it.
+- NEXT: Test actual Android Record → Stop & Save → Play on CHamorU; verify export/import cross-device, then enlist a fluent speaker for accurate founder-approved audio and promote validated phrases into lessons. Keep the hourly build team investigating legacy silent TTS separately.
+
+
 ## 2026-10-26 UTC | Android phoneme playback stall recovery
 
 - Source reviewed: main commit 60e66126a3, `index.html` v3.9 audio diagnostics.
