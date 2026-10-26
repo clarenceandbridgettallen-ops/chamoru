@@ -19,6 +19,7 @@ function setup(behavior='pending'){
     play(){
       if(behavior==='throw')throw new Error('Audio blocked');
       if(behavior==='reject')return Promise.reject(new Error('Audio blocked'));
+      if(behavior==='deferred-reject')return new Promise((_,reject)=>{this.rejectPlay=reject});
       return new Promise(()=>{});
     }
     pause(){this.paused=true}
@@ -101,6 +102,18 @@ test('late completion from superseded clip cannot count as success',async()=>{
   h.clips[0].onended();
   assert.equal(await older,false,'Old clip must not report success after replacement');
   assert.equal(h.active(),h.clips[1],'Newer clip must stay active');
+  h.clips[1].onended();
+  assert.equal(await newer,true);
+  assert.ok(h.timers.every(t=>t.cleared));
+});
+
+test('late playback rejection cannot replace status or interrupt a newer clip',async()=>{
+  const h=setup('deferred-reject');
+  const older=h.play('ts');const newer=h.play('ts');
+  h.clips[0].rejectPlay(new Error('late blocked'));
+  assert.equal(await older,false);
+  assert.equal(h.statuses.length,0,'Superseded rejection must not overwrite status');
+  assert.equal(h.active(),h.clips[1],'Newer audio remains active');
   h.clips[1].onended();
   assert.equal(await newer,true);
   assert.ok(h.timers.every(t=>t.cleared));
