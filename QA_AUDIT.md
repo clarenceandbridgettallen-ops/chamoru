@@ -116,3 +116,11 @@
 - TESTED: Pre-commit simulation confirmed older completion=false, newer completion=true, active player preserved, timers cleared and no stale warning. GitHub Actions audio regression run 40342955097 completed SUCCESS; Pages workflow 40342933022 completed SUCCESS for test commit. Workflow success is not an independently loaded site or audible phone test.
 - PRESERVED: Local progress keys, rewards, mastery gates, course content, navigation, storybook, and fluent-speaker approval gate unchanged.
 - NEXT: Physical Android Test Sound/CH/A/Å/Reading Studio observations in Chrome and in-app browser; review audio with a fluent CHamoru speaker before labeling authoritative.
+
+## 2026-10-26 11:46 Eastern | Late audio rejection regression
+
+- INSPECTED: public main commit a6ba591e6a7baae14fde8a74b715957edc834a4b, current phoneme player and nine prior regression cases, GitHub Actions and published-site reader. Site could not be independently loaded in the web reader.
+- CODE UPDATED: `scripts/test_phoneme_audio.js` commit `57d026310e4fe99c96fdb8a515d5db655025a68e` adds a tenth simulated case: late rejected Audio.play from a superseded clip cannot overwrite status or interrupt the newer clip. No app UX, storage keys, mastery gates, course content or audio assets changed.
+- TESTED ONLY: test source and fake Audio behavior reviewed; actual new CI workflow 40353099771 and Pages workflow 40353099821 were IN PROGRESS at first check. Do not call these passed until confirmed.
+- NOT VERIFIED: audible physical Android playback, fluent CHamoru pronunciation, full real-device learning journeys or public website loading. Test Sound remains speaker-only, not pronunciation approval.
+- NEXT: confirm new CI, collect real Android playback observations, then fluent-speaker review of CH/A/Å before publishing pronunciation as authoritative.
