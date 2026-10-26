@@ -3,7 +3,7 @@
 (function(global){
 const WORDS=[['hafa','Håfa adai!','Hello'],['thanks','Si Yu’os ma’åse’.','Thank you'],['yes','Hunggan.','Yes'],['no','Åhe’.','No'],['mother','Nåna','Mother'],['father','Tåta','Father'],['parent','Saina','Parent'],['child','Påtgon','Child']];
 const DB='chamoru-family-voice-v1',MAX=3*1024*1024;
-let dbPromise=null,rec=null,stream=null,parts=[],currentId=null,limitTimer=null,player=null,audioUrl=null,playSeq=0,message='';
+let dbPromise=null,rec=null,stream=null,parts=[],currentId=null,limitTimer=null,player=null,audioUrl=null,playSeq=0,micSeq=0,pendingMic=false,message='';
 function phrase(id){return WORDS.find(w=>w[0]===id)}
 function status(s){message=s;const el=document.getElementById('voiceStudioStatus');if(el)el.textContent=s}
 function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -72,10 +72,12 @@ function clearMic(){if(limitTimer){clearTimeout(limitTimer);limitTimer=null}if(s
 async function start(id){
  if(!phrase(id)||currentId){status('Finish the current recording first.');return}
  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||typeof MediaRecorder==='undefined'){status('Recording needs Chrome with microphone permission.');return}
- stopAudio();currentId=id;parts=[];
+ stopAudio();currentId=id;parts=[];pendingMic=true;const request=++micSeq;
+ status('Waiting for microphone permission…');render();
  try{
-  stream=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
-  if(currentId!==id){clearMic();return}
+  const acquired=await navigator.mediaDevices.getUserMedia({audio:true,video:false});
+  if(request!==micSeq||currentId!==id){try{acquired.getTracks().forEach(t=>t.stop())}catch(e){}return}
+  stream=acquired;pendingMic=false;
   const types=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'];
   const mime=types.find(t=>MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t));
   rec=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
@@ -92,8 +94,9 @@ async function start(id){
   };
   rec.start(250);status('Recording '+phrase(id)[1]+'… tap Stop & Save when done.');render();
   limitTimer=setTimeout(()=>{if(rec&&rec.state==='recording'){status('20-second limit. Saving…');finish()}},20000);
- }catch(e){currentId=null;rec=null;clearMic();status('Microphone unavailable: '+(e.name||e.message)+'. Allow the microphone in Chrome settings.');render()}
+ }catch(e){if(request!==micSeq)return;pendingMic=false;currentId=null;rec=null;clearMic();status('Microphone unavailable: '+(e.name||e.message)+'. Allow the microphone in Chrome settings.');render()}
 }
+function cancel(){if(!pendingMic)return;micSeq++;pendingMic=false;currentId=null;parts=[];status('Microphone request cancelled. Dismiss any browser permission prompt.');render()}
 function finish(){if(rec&&rec.state!=='inactive')try{rec.stop()}catch(e){status('Could not stop: '+e.message);currentId=null;clearMic()}}
 const asDataURL=blob=>new Promise((res,rej)=>{const reader=new FileReader();reader.onload=()=>res(reader.result);reader.onerror=()=>rej(Error('Cannot encode audio'));reader.readAsDataURL(blob)});
 async function exportAll(){
@@ -130,7 +133,7 @@ async function render(){
  root.innerHTML=WORDS.map(w=>{
   const on=currentId===w[0],saved=have.has(w[0]);
   return '<article class="chvoice-item"><div><strong>'+escapeHTML(w[1])+'</strong><div class="small muted">'+escapeHTML(w[2])+' · '+(saved?'Saved on this phone':'No recording yet')+'</div></div><div class="chvoice-actions">'+
-    (on?'<button class="primary" onclick="CHVoice.finish()">■ Stop & Save</button>':'<button class="secondary" onclick="CHVoice.start(\''+w[0]+'\')" '+(currentId?'disabled':'')+'>● Record</button>')+
+    (on?(pendingMic?'<button class="secondary" onclick="CHVoice.cancel()">Cancel microphone request</button>':'<button class="primary" onclick="CHVoice.finish()">■ Stop & Save</button>'):'<button class="secondary" onclick="CHVoice.start(\''+w[0]+'\')" '+(currentId?'disabled':'')+'>● Record</button>')+
     '<button class="secondary" onclick="CHVoice.replay(\''+w[0]+'\')" '+(!saved||currentId?'disabled':'')+'>▶ Play</button>'+
     '<button class="secondary" onclick="CHVoice.erase(\''+w[0]+'\')" '+(!saved||currentId?'disabled':'')+'>Delete</button></div></article>';
  }).join('');
@@ -158,11 +161,12 @@ if(document.addEventListener)document.addEventListener('click',function(ev){
  }
 },true);
 if(global.addEventListener)global.addEventListener('pagehide',function(){
+ micSeq++;pendingMic=false;currentId=null;
  if(rec&&rec.state==='recording'){try{rec.stop()}catch(e){}}
  clearMic();stopAudio();
 });
 
-global.CHVoice={open,render,start,finish,replay,erase,exportAll,importAll,playWord,stored,save,storedAll,stopAudio,phrase};
+global.CHVoice={open,render,start,cancel,finish,replay,erase,exportAll,importAll,playWord,stored,save,storedAll,stopAudio,phrase};
 global.voiceStudio=open;
 global.playVocab=playWord;
 })(window);
