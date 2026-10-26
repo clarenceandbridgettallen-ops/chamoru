@@ -144,3 +144,13 @@
 - **TESTED ONLY:** Parsed current `index.html` phoneme-audio mapping as JSON. It contains exactly **two embedded MP3 data URIs**, keys `ts` and `tsa`, both beginning with the `ID3` MP3 signature. Confirmed four navigation labels, sticky Next references, the legacy `chamoru_for_you_unit1_v15` storage key, and a fluent-speaker review warning remain present. A valid header is NOT a decoded audio test or pronunciation approval.
 - **BLOCKED / NEXT:** Actual audible playback of Test Sound, CH, A/Å and Reading Studio requires a physical Android check. Embedded audio inventory is limited and must not be misrepresented as a reviewed full CHamoru phoneme library. No new vocabulary or pronunciation was published; fluent-speaker review gate remains mandatory.
 - **FILES/DEPLOYMENT:** Audit-only update to `QA_AUDIT.md`; app code, progress and public assets unchanged. The fetched public page was reachable, but no new deployment was initiated.
+
+
+## 2026-10-26 15:49 ET | Speaker diagnostic stale-callback protection
+
+- **INSPECTED:** Current `index.html` speaker diagnostic and guided phoneme test harness; previous main `bc8f6bb` Pages run `40380569323` was SUCCESS. Android in-app sound remains a user-reported failure, not independently reproduced.
+- **CODE UPDATED:** `index.html` commit `ea7ee157e23f995dd71b91bd1f323e16136b56c3` makes the Test Sound beep cancel its preceding oscillator and ignore obsolete completion, error, or delayed `AudioContext.resume()` callbacks after another sound action. No lesson progress keys, mastery, rewards, navigation, pronunciation recordings, or course data changed.
+- **TESTED:** `scripts/test_phoneme_audio.js` commit `752799263f96fadde1b1adc94e9db29e9623269e` adds two synthetic speaker tests. An independent fake-oscillator harness passed four cases before commit. Final GitHub Actions audio workflow `40390190461` completed SUCCESS with **15 tests passed, 0 failed**. Pages workflow `40390190594` completed SUCCESS for the same commit.
+- **NOT VERIFIED:** Audible beep or CH/A pronunciation on a real Android device, complete live mobile journey, fluent CHamoru review, or whether the phone's silent-audio issue is resolved. The Pages workflow is deployment evidence, not proof of audio playback.
+- **NEXT:** Ask an authorized Android tester to tap Test Sound, CH, A/Å, record the exact on-screen diagnostic text and whether sound was heard; keep English-TTS approximations unapproved until fluent-speaker review.
+
