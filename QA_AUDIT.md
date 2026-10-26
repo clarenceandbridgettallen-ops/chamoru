@@ -78,3 +78,12 @@
 - TESTED ONLY: source contract checks confirmed seven-second stall guards in speaker beep, recorded phoneme, A/Å vowel speech and Reading Studio; legacy browser storage keys `chamoru_for_you_unit1_v15` / `chamoru_for_you_v16_extras` and mastery key `chamoru_mastery_v30` remain present; experimental English voice and fluent-speaker review warnings remain explicit. All seven static checks passed. No application code changed this run.
 - BLOCKED: public URL could not be independently fetched by the available web reader. No physical Android speaker output, actual browser journeys, course mastery, or pronunciation accuracy was verified. A successful Pages job proves deployment workflow completion, not audibility.
 - NEXT: owner-device observation of Test Sound, CH, A/Å and Reading Studio in Chrome and the in-app browser, recording whether each is audible; then fluent CHamoru speaker review before language audio is approved. No content, rewards, gates or saved progress changed.
+
+## 2026-10-26 UTC | Executable phoneme audio regression suite
+
+- Inspected current public main source (previous audit commit 835e5792), guided `u0PlayRecordedPhoneme`, speaker diagnostics, and the existing seven-second recovery watchdog.
+- CODE UPDATED: Added `scripts/test_phoneme_audio.js` (commit bdf776e51afb7382b7cdc455d6ba4e5aad3245b1) and a read-only GitHub Actions workflow `.github/workflows/audio-qa.yml` (commit 6f5ff1a224911d7dac3debc59ed2e01ac84f3409).
+- VERIFIED: Five behavioral mock-Audio cases passed in local Node testing: ended, stalled, rejected play promise, error/synchronous failure, and missing phoneme. GitHub Actions run 40310909085 completed SUCCESS and its `node --test` job passed against the repository's actual `index.html`.
+- LIMITATION: These tests simulate browser audio events; they do NOT establish that Android emitted audible sound or that any phoneme is linguistically accurate. Fluent CHamoru review and physical Android testing remain mandatory. Existing learning storage keys, rewards, mastery, navigation, storybook, and lessons were not edited.
+- DEPLOYMENT: The new workflow's Pages deployment run 40310907177 was still in progress when checked. Do not claim this audit or source update is live until deployment completes and the public site is checked.
+- NEXT: Obtain real phone Test Sound/CH/A results; investigate actual audio permissions/decoding if silent. Add sourced curriculum only after fluent review.
