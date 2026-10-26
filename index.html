@@ -529,14 +529,24 @@ function u0PlaySymbol(symbol){
     if(!('speechSynthesis' in window)||typeof SpeechSynthesisUtterance==='undefined'){
       u0SetStatus('This browser does not support speech. Use Chrome on your phone.');return;
     }
+    const run=u0PlaybackNumber;
     const say=new SpeechSynthesisUtterance('ah');
     const voice=u0USVoice();if(voice)say.voice=voice;
     say.lang='en-US';say.rate=.78;say.volume=1;
-    say.onstart=()=>u0SetStatus('Vowel voice playback started.');
-    say.onend=()=>u0SetStatus('Vowel voice playback completed.');
-    say.onerror=e=>u0SetStatus('Vowel audio error: '+(e.error||'voice unavailable')+'. Try Chrome.');
+    // Browser TTS is an English example, not approved CHamoru pronunciation.
+    let finished=false;
+    const watchdog=setTimeout(()=>{
+      if(finished||run!==u0PlaybackNumber)return;
+      finished=true;
+      u0SetStatus('Vowel voice stalled. Try Test Sound or open in Chrome. This is not fluent-reviewed CHamoru audio.');
+      try{speechSynthesis.cancel()}catch(e){}
+    },7000);
+    const finish=message=>{if(finished||run!==u0PlaybackNumber)return;finished=true;clearTimeout(watchdog);u0SetStatus(message);};
+    say.onstart=()=>{if(!finished&&run===u0PlaybackNumber)u0SetStatus('English vowel example started. Did you hear it? Not verified CHamoru pronunciation.');};
+    say.onend=()=>finish('English vowel example ended. Did you hear it? CHamoru pronunciation needs fluent-speaker review.');
+    say.onerror=e=>finish('Vowel audio error: '+(e.error||'voice unavailable')+'. Try Chrome.');
     try{speechSynthesis.cancel();speechSynthesis.speak(say);}
-    catch(e){u0SetStatus('Speech failed: '+e.message+'. Try Chrome.')}
+    catch(e){finish('Speech failed: '+e.message+'. Try Chrome.')}
     return;
   }
   u0SaySequence(symbol==='H'?['breath']:[symbol],label);
