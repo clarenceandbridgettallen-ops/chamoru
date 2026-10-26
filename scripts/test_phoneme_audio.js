@@ -159,3 +159,49 @@ test('successful recorded phoneme may announce finished sequence',async()=>{
   const h=sequenceHarness(true);await h.run();
   assert.match(h.statuses.at(-1),/^Finished\./);
 });
+
+const speakerStart=html.indexOf('function u0SoundTest(){');
+const speakerEnd=html.indexOf('window.u0SoundTest=u0SoundTest;',speakerStart);
+assert.ok(speakerStart>=0&&speakerEnd>speakerStart,'speaker test must exist');
+const speakerSource=html.slice(speakerStart,speakerEnd);
+function speakerHarness(state='running'){
+  const statuses=[],oscillators=[],resumes=[];
+  class FakeContext{
+    constructor(){this.state=state;this.currentTime=0;this.destination={}}
+    createOscillator(){
+      const osc={frequency:{setValueAtTime(){}},connect(){},start(){this.started=true},
+        stop(){this.stopCalls=(this.stopCalls||0)+1}};
+      oscillators.push(osc);return osc;
+    }
+    createGain(){return {gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){}}}
+    resume(){return new Promise((resolve,reject)=>resumes.push({resolve,reject}))}
+  }
+  const ctx={window:{AudioContext:FakeContext},u0SetStatus:msg=>statuses.push(msg)};
+  vm.createContext(ctx);
+  vm.runInContext('let u0PlaybackNumber=0,u0AudioContext=null,u0ActiveSource=null;'+
+    'function u0StopSound(){u0PlaybackNumber++;if(u0ActiveSource){u0ActiveSource.stop();u0ActiveSource=null}}\n'+
+    speakerSource,ctx);
+  return {statuses,oscillators,resumes,
+    play:()=>vm.runInContext('u0SoundTest()',ctx),
+    stop:()=>vm.runInContext('u0StopSound()',ctx)};
+}
+
+test('speaker test ignores superseded oscillator completion',()=>{
+  const h=speakerHarness();
+  h.play();h.play();
+  assert.equal(h.oscillators.length,2);
+  assert.ok(h.oscillators[0].stopCalls>=2,'Prior test tone must be stopped');
+  const before=h.statuses.length;
+  h.oscillators[0].onended();
+  assert.equal(h.statuses.length,before,'Stale completion must not replace status');
+  h.oscillators[1].onended();
+  assert.match(h.statuses.at(-1),/Test tone completed/);
+});
+
+test('cancelled speaker test cannot start after delayed audio resume',async()=>{
+  const h=speakerHarness('suspended');
+  h.play();assert.equal(h.resumes.length,1);
+  h.stop();h.resumes[0].resolve();
+  await Promise.resolve();await Promise.resolve();
+  assert.equal(h.oscillators.length,0,'Cancelled test must not start a late tone');
+});
