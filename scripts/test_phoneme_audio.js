@@ -15,7 +15,7 @@ const playerSource=html.slice(start,end);
 function setup(behavior='pending'){
   const statuses=[];const timers=[];const clips=[];
   class FakeAudio{
-    constructor(url){this.url=url;this.paused=false;clips.push(this)}
+    constructor(url){if(behavior==='constructor')throw new Error('Audio unavailable');this.url=url;this.paused=false;clips.push(this)}
     play(){
       if(behavior==='throw')throw new Error('Audio blocked');
       if(behavior==='reject')return Promise.reject(new Error('Audio blocked'));
@@ -62,4 +62,21 @@ test('audio error and synchronous play failure resolve false',async()=>{
 test('unknown phoneme resolves without creating audio',async()=>{
   const h=setup();assert.equal(await h.play('unknown'),false);
   assert.equal(h.clips.length,0);
+});
+
+
+test('late error after timeout cannot overwrite stalled-audio guidance',async()=>{
+  const h=setup();const p=h.play('ts');h.timers[0].fn();
+  assert.equal(await p,false);
+  const before=h.statuses.join(' ');
+  h.clips[0].onerror();
+  assert.equal(h.statuses.join(' '),before);
+  assert.equal(h.active(),null);
+});
+
+test('unavailable Audio constructor offers browser recovery',async()=>{
+  const h=setup('constructor');
+  assert.equal(await h.play('ts'),false);
+  assert.match(h.statuses.join(' '),/Audio player unavailable/);
+  assert.equal(h.active(),null);
 });
