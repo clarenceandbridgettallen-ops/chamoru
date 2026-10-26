@@ -130,3 +130,10 @@
 ### 2026-10-26 12:44 ET | Superseded phoneme playback
 - CODE UPDATED: Starting another recorded phoneme now pauses and settles the prior clip immediately, rather than leaving overlapping audio active until an old timeout. No progress keys, lessons, or pronunciation assets changed.
 - TESTED ONLY: In-memory fake-Audio behavior confirmed old promise resolves false, prior clip pauses, watchdog clears, and new clip finishes true; repository regression added. Physical Android audibility and fluent pronunciation remain UNVERIFIED.
+
+
+## 2026-10-26 13:45 ET | Guided phoneme sequence failure feedback
+- **CODE UPDATED:** `index.html` commit `5129ddf3680a4b0b3b002330b30eba6eb2fb45da` stops a guided sequence when a recorded phoneme fails instead of overwriting its recovery guidance with a false `Finished` message. `scripts/test_phoneme_audio.js` commit `59e0aa3b1635614ddadbdd842a462de00c527958` adds two actual-sequence behavioral cases for failure and success.
+- **VERIFIED AUTOMATED TESTS:** GitHub Actions audio regression run `40371972096` completed SUCCESS, with **13/13** Node tests passing. Pages workflow `40371973340` was PENDING/IN PROGRESS at last check. A CI success does not prove that the website loaded independently or that Android sound is audible.
+- **PRESERVED:** Browser progress keys, mastery gates, rewards, course content, storybook, navigation and native-speaker review gate. No English TTS pronunciation was labeled authoritative.
+- **NEXT:** Verify final Pages deployment; physical Android Test Sound/CH/A/Å and Reading Studio playback; obtain fluent CHamoru speaker approval before publishing pronunciation.
