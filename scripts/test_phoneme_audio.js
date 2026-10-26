@@ -244,3 +244,24 @@ test('English example voice error and blocked start resolve false',async()=>{
 test('guided sequence exits on failed English example rather than reporting finished',()=>{
   assert.match(sequenceSource,/else if\(!await u0AmericanUtter\(item\)\)return/);
 });
+
+
+test('A and Å vowel buttons recover when Android speech constructor throws',()=>{
+  const symbolStart=html.indexOf('function u0PlaySymbol(symbol){');
+  const symbolEnd=html.indexOf('function u0SoundTest(){',symbolStart);
+  assert.ok(symbolStart>=0&&symbolEnd>symbolStart);
+  const statuses=[];
+  const ctx={
+    window:{speechSynthesis:{}},
+    SpeechSynthesisUtterance:class{constructor(){throw Error('WebView voice unavailable')}},
+    u0StopSound:()=>{},u0SetStatus:message=>statuses.push(message),
+    u0PlaybackNumber:1
+  };
+  vm.createContext(ctx);
+  vm.runInContext(html.slice(symbolStart,symbolEnd),ctx);
+  for(const vowel of ['A','Å']){
+    assert.doesNotThrow(()=>vm.runInContext('u0PlaySymbol('+JSON.stringify(vowel)+')',ctx));
+  }
+  assert.equal(statuses.filter(message=>/Vowel voice unavailable/.test(message)).length,2);
+  assert.match(statuses.at(-1),/Test Sound or open in Chrome/);
+});
