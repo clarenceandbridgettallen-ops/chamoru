@@ -87,3 +87,13 @@
 - LIMITATION: These tests simulate browser audio events; they do NOT establish that Android emitted audible sound or that any phoneme is linguistically accurate. Fluent CHamoru review and physical Android testing remain mandatory. Existing learning storage keys, rewards, mastery, navigation, storybook, and lessons were not edited.
 - DEPLOYMENT: The new workflow's Pages deployment run 40310907177 was still in progress when checked. Do not claim this audit or source update is live until deployment completes and the public site is checked.
 - NEXT: Obtain real phone Test Sound/CH/A results; investigate actual audio permissions/decoding if silent. Add sourced curriculum only after fluent review.
+
+
+## 2026-10-26 07:47 Eastern | Late audio callbacks and missing-player regression
+
+- INSPECTED: current public main index.html and scripts/test_phoneme_audio.js, recent commits, prior audio QA and Pages deployment status.
+- CODE UPDATED: scripts/test_phoneme_audio.js commit 7af831c5918ceb163573bea995ffd5fbaea69c23 adds two behavioral regressions: late error after the seven-second timeout must not overwrite recovery feedback; Audio constructor failure must resolve safely with browser guidance. The tests run against the actual u0PlayRecordedPhoneme function extracted from index.html.
+- TESTED: Both scenarios passed in an isolated V8 harness using the current source function. GitHub Actions audio regression run 40317586832 completed SUCCESS for that exact commit. No app code, storage keys, mastery gates, navigation, content or rewards changed.
+- DEPLOYMENT: Pages run 40317586443 for the test commit was still IN PROGRESS when checked. A passing workflow is not proof of audible phone playback.
+- NOT VERIFIED: physical Android speaker output, pronunciation accuracy, real browser navigation or fluent-speaker approval. English speech remains explicitly an approximation.
+- NEXT: Physical Android Test Sound / CH / A/Å / Reading Studio diagnostics; collect device/browser-specific results and fluent CHamoru review before authoritative audio labeling.
