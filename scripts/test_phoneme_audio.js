@@ -165,9 +165,10 @@ const speakerEnd=html.indexOf('window.u0SoundTest=u0SoundTest;',speakerStart);
 assert.ok(speakerStart>=0&&speakerEnd>speakerStart,'speaker test must exist');
 const speakerSource=html.slice(speakerStart,speakerEnd);
 function speakerHarness(state='running'){
-  const statuses=[],oscillators=[],resumes=[];
+  const statuses=[],oscillators=[],resumes=[],timers=[],contexts=[];
   class FakeContext{
-    constructor(){this.state=state;this.currentTime=0;this.destination={}}
+    constructor(){this.state=state;this.currentTime=0;this.destination={};this.closed=false;contexts.push(this)}
+    close(){this.closed=true;this.state='closed';return Promise.resolve()}
     createOscillator(){
       const osc={frequency:{setValueAtTime(){}},connect(){},start(){this.started=true},
         stop(){this.stopCalls=(this.stopCalls||0)+1}};
@@ -176,12 +177,14 @@ function speakerHarness(state='running'){
     createGain(){return {gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){}}}
     resume(){return new Promise((resolve,reject)=>resumes.push({resolve,reject}))}
   }
-  const ctx={window:{AudioContext:FakeContext},u0SetStatus:msg=>statuses.push(msg)};
+  const ctx={window:{AudioContext:FakeContext},u0SetStatus:msg=>statuses.push(msg),
+    setTimeout:(fn,ms)=>{const timer={fn,ms,cleared:false};timers.push(timer);return timer},
+    clearTimeout:timer=>{timer.cleared=true}};
   vm.createContext(ctx);
   vm.runInContext('let u0PlaybackNumber=0,u0AudioContext=null,u0ActiveSource=null;'+
     'function u0StopSound(){u0PlaybackNumber++;if(u0ActiveSource){u0ActiveSource.stop();u0ActiveSource=null}}\n'+
     speakerSource,ctx);
-  return {statuses,oscillators,resumes,
+  return {statuses,oscillators,resumes,timers,contexts,
     play:()=>vm.runInContext('u0SoundTest()',ctx),
     stop:()=>vm.runInContext('u0StopSound()',ctx)};
 }
@@ -195,6 +198,27 @@ test('speaker test ignores superseded oscillator completion',()=>{
   h.oscillators[0].onended();
   assert.equal(h.statuses.length,before,'Stale completion must not replace status');
   h.oscillators[1].onended();
+  assert.match(h.statuses.at(-1),/Test tone completed/);
+});
+
+test('suspended speaker test times out with recovery and ignores late resume',async()=>{
+  const h=speakerHarness('suspended');h.play();
+  assert.equal(h.timers.length,1);
+  assert.equal(h.timers[0].ms,7000);
+  h.timers[0].fn();
+  assert.match(h.statuses.at(-1),/Speaker test stalled/);
+  assert.equal(h.contexts[0].closed,true);
+  h.resumes[0].resolve();await Promise.resolve();await Promise.resolve();
+  assert.equal(h.oscillators.length,0,'Late resume must not play after timeout');
+  h.play();assert.equal(h.contexts.length,2,'Retry must create a fresh audio context');
+});
+
+test('successful speaker resume clears startup watchdog',async()=>{
+  const h=speakerHarness('suspended');h.play();h.resumes[0].resolve();
+  await Promise.resolve();await Promise.resolve();
+  assert.equal(h.timers[0].cleared,true);
+  assert.equal(h.oscillators.length,1);
+  h.oscillators[0].onended();
   assert.match(h.statuses.at(-1),/Test tone completed/);
 });
 
