@@ -205,3 +205,42 @@ test('cancelled speaker test cannot start after delayed audio resume',async()=>{
   await Promise.resolve();await Promise.resolve();
   assert.equal(h.oscillators.length,0,'Cancelled test must not start a late tone');
 });
+
+const americanStart=html.indexOf('function u0AmericanUtter(text)');
+const americanEnd=html.indexOf('function u0PlayRecordedPhoneme(',americanStart);
+assert.ok(americanStart>=0&&americanEnd>americanStart,'English-example voice player must exist');
+const americanSource=html.slice(americanStart,americanEnd);
+function englishVoiceHarness(behavior='normal'){
+  const statuses=[],timers=[],utterances=[];let cancelled=false;
+  class FakeUtterance{constructor(text){this.text=text;utterances.push(this)}}
+  const ctx={window:{speechSynthesis:{}},SpeechSynthesisUtterance:FakeUtterance,
+    u0PlaybackNumber:0,u0USVoice:()=>null,u0SetStatus:msg=>statuses.push(msg),
+    setTimeout:(fn,ms)=>{const timer={fn,ms,cleared:false};timers.push(timer);return timer},
+    clearTimeout:t=>{t.cleared=true},
+    speechSynthesis:{speak(){if(behavior==='throw')throw new Error('blocked')},
+      cancel(){cancelled=true}}};
+  vm.createContext(ctx);vm.runInContext(americanSource,ctx);
+  return {statuses,timers,utterances,play:()=>vm.runInContext("u0AmericanUtter('ah')",ctx),
+    cancelled:()=>cancelled};
+}
+test('English example voice timeout settles and displays browser recovery',async()=>{
+  const h=englishVoiceHarness();const pending=h.play();
+  assert.equal(h.timers[0].ms,7000);h.timers[0].fn();
+  assert.equal(await pending,false);assert.equal(h.cancelled(),true);
+  assert.match(h.statuses.at(-1),/English example voice stalled/);
+  const prior=h.statuses.length;h.utterances[0].onend();
+  assert.equal(h.statuses.length,prior,'Late completion cannot replace failure guidance');
+});
+test('English example voice completion clears watchdog',async()=>{
+  const h=englishVoiceHarness();const pending=h.play();h.utterances[0].onend();
+  assert.equal(await pending,true);assert.equal(h.timers[0].cleared,true);
+});
+test('English example voice error and blocked start resolve false',async()=>{
+  const a=englishVoiceHarness();const first=a.play();a.utterances[0].onerror();
+  assert.equal(await first,false);assert.match(a.statuses.at(-1),/voice failed/);
+  const b=englishVoiceHarness('throw');assert.equal(await b.play(),false);
+  assert.match(b.statuses.at(-1),/could not start/);
+});
+test('guided sequence exits on failed English example rather than reporting finished',()=>{
+  assert.match(sequenceSource,/else if\(!await u0AmericanUtter\(item\)\)return/);
+});
