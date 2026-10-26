@@ -170,3 +170,12 @@
 - **TESTED:** Isolated V8 execution of the actual updated symbol handler with a throwing constructor for both A and Å passed (2/2 user-visible recovery cases, no uncaught exception). `scripts/test_phoneme_audio.js` commit `f4d006f47ea61b2f6923182df27782ce95ac9328` adds a permanent Node VM regression. GitHub Actions audio regression run `40407355302` completed SUCCESS; Pages build/deployment workflow `40407356096` also completed SUCCESS.
 - **NOT VERIFIED:** Actual audible Android sound, fluent CHamoru pronunciation, or independent public mobile-browser playback. GitHub deployment workflow success is not proof of physical sound or complete lesson journeys.
 - **NEXT:** Have a real Android listener try Test Sound → CH → A/Å and capture which control audibly works. Replace unreviewed pronunciation only after fluent CHamoru speaker approval.
+
+
+## 2026-10-26 18:49 ET | Android speaker AudioContext resume watchdog
+
+- **INSPECTED:** Main source after 17:47 ET vowel recovery; Unit 0 `u0SoundTest` and existing 20 Node audio tests; public Pages workflow. The suspended AudioContext `resume()` promise had no timeout, so Android WebView could leave Test Sound stuck on "Starting speaker test" indefinitely.
+- **CODE UPDATED:** `index.html` commit `5b609c2b1738e31cf98220db95bd96b8c7570207` adds a seven-second suspended-context watchdog, user-visible Chrome/volume recovery, closure of a stalled context, and late-resume suppression. Retrying creates a fresh AudioContext. Existing playback keys, navigation, mastery gates, rewards, lessons and pronunciation-review restrictions were not changed.
+- **TESTED:** `scripts/test_phoneme_audio.js` commit `01284f4c08d98a7b3b1bdcce090ee1d9fe92a16a` adds timeout/late-resume and successful-resume regression tests. Isolated V8 simulation passed before commit; GitHub Actions `40415379001` completed SUCCESS with **22/22 Node tests**. GitHub Pages workflow `40415379036` completed SUCCESS on the same test commit.
+- **NOT VERIFIED:** A physical Android beep, CH or A/Å audible playback, complete mobile browser journey, exact production HTML served at the Pages URL, or fluent CHamoru pronunciation. A public web reader could not retrieve the URL; that does not prove an outage. Computer/English sound remains unreviewed approximation.
+- **NEXT:** Use a real Android listener for Test Sound → CH → A/Å, record which sound is actually heard, and require fluent-speaker approval before publishing authoritative phonics audio. Do not unlock new lessons on synthetic audio evidence alone.
