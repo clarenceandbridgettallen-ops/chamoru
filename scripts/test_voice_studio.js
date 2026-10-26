@@ -94,5 +94,5 @@ test('invalid or oversized recordings never become saved',async()=>{
 });
 test('recorded words are never claimed as verified native pronunciation',()=>{
   assert.match(source,/not independently certified/i);
-  assert.match(source,/not uploaded automatically/i);
+  assert.match(source,/never uploaded automatically/i);
 });
