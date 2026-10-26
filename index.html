@@ -159,11 +159,12 @@ function playStoredGreeting(slow){
   try{player=new Audio(HAFA_LOCAL_AUDIO)}catch(e){lessonAudioStatus('MP3 player unavailable: '+e.message+'. Try Chrome.');return}
   chamoruRecordedClip=player;player.volume=1;player.playbackRate=slow?.8:1;
   lessonAudioStatus('Loading downloadable phrase sound (approximate only)…');
+  let started=false;
   const clearWait=()=>{if(chamoruRecordedTimer){clearTimeout(chamoruRecordedTimer);chamoruRecordedTimer=null}};
-  player.onplaying=()=>{if(run!==chamoruRecordedRun)return;clearWait();lessonAudioStatus('Phrase audio is playing. Computer-generated approximation, not CHamoru-reviewed.')};
+  player.onplaying=()=>{if(run!==chamoruRecordedRun)return;started=true;clearWait();lessonAudioStatus('Phrase audio is playing. Computer-generated approximation, not CHamoru-reviewed.')};
   player.onended=()=>{if(run===chamoruRecordedRun){clearWait();chamoruRecordedClip=null;lessonAudioStatus('Phrase clip finished. Pronunciation still needs native-speaker approval.')}};
   player.onerror=()=>{if(run===chamoruRecordedRun){clearWait();chamoruRecordedClip=null;lessonAudioStatus('MP3 decode failed. Try Chrome or check media settings.')}};
-  chamoruRecordedTimer=setTimeout(()=>{if(run===chamoruRecordedRun&&player.paused){lessonAudioStatus('MP3 did not start. Tap Test Sound to check your speaker, then try Chrome.')}},7000);
+  chamoruRecordedTimer=setTimeout(()=>{if(run===chamoruRecordedRun&&!started){lessonAudioStatus('MP3 did not start. Tap Test Sound to check your speaker, then try Chrome.')}},7000);
   try{const p=player.play();if(p&&p.catch)p.catch(e=>{if(run===chamoruRecordedRun){clearWait();lessonAudioStatus('MP3 blocked: '+(e.name||'play failure')+'. Test Sound checks speaker only.')}})}catch(e){clearWait();lessonAudioStatus('MP3 could not start: '+e.message)}
 }
 window.playStoredGreeting=playStoredGreeting;
