@@ -502,7 +502,7 @@ function u0Breath(){return new Promise(resolve=>{try{const AC=window.AudioContex
 function u0AmericanUtter(text){return new Promise(resolve=>{if(!('speechSynthesis' in window)||typeof SpeechSynthesisUtterance==='undefined'){resolve();return}const u=new SpeechSynthesisUtterance(text),voice=u0USVoice();if(voice){u.voice=voice;u.lang=voice.lang}else u.lang='en-US';u.rate=.72;u.pitch=1;u.onend=resolve;u.onerror=resolve;speechSynthesis.speak(u)})}
 function u0PlayRecordedPhoneme(phoneme){return new Promise(resolve=>{
   const url=U0_PHONEME_AUDIO[phoneme];if(!url){resolve(false);return}
-  const audio=new Audio(url);u0ActiveClip=audio;let settled=false;
+  let audio;try{audio=new Audio(url)}catch(e){u0SetStatus('Audio player unavailable. Try Chrome.');resolve(false);return}u0ActiveClip=audio;let settled=false;
   // In-app Android browsers may never report playback completion; release stalled clips.
   const watchdog=setTimeout(()=>{if(u0ActiveClip===audio){u0SetStatus('Sound stalled. Try Test Sound or open in Chrome.');try{audio.pause()}catch(e){}}done(false)},7000);
   function done(ok){if(settled)return;settled=true;clearTimeout(watchdog);if(u0ActiveClip===audio)u0ActiveClip=null;resolve(!!ok)}
