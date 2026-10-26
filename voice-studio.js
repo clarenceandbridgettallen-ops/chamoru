@@ -161,7 +161,10 @@ if(document.addEventListener)document.addEventListener('click',function(ev){
  }
 },true);
 if(global.addEventListener)global.addEventListener('pagehide',function(){
- micSeq++;pendingMic=false;currentId=null;
+ micSeq++;pendingMic=false;
+ // Preserve the existing stop-and-save attempt for a recording already in progress.
+ // Only invalidate a permission prompt that has not created a recorder yet.
+ if(!rec)currentId=null;
  if(rec&&rec.state==='recording'){try{rec.stop()}catch(e){}}
  clearMic();stopAudio();
 });
