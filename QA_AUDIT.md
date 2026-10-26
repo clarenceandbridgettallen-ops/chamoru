@@ -54,3 +54,11 @@
 - NOT VERIFIED: actual Android audio, the listener hearing the sound, native speaker approval, live browser journeys or authoritative phonics. No progress keys, rewards, mastery, course content, navigation or local storage format changed.
 - Next: verify physical Android Test Sound / CH / A with user observations; require fluent-speaker sign-off before marking any CHamoru phonics audio authoritative.
 
+
+## 2026-10-26 UTC | Reading Studio voice startup watchdog
+
+- Inspected current public main da7723e and live page title `CHamorU · Direct MP3 Greeting v4.2`. Reader voice was previously missing a startup watchdog and stale-callback guard, even though the Unit 0 and greeting players already had recovery behavior.
+- CODE UPDATED: `index.html` commit `1d49468fbf44a27c0e607fc235414cf3be38e896`. Added seven-second startup timeout, explicit unsupported/failed voice feedback, cancellation of stale callbacks, and cleanup when changing reader pages, language help, or tapping Stop. Did not change progress keys, mastery gates, reward logic, story content or navigation.
+- TESTED ONLY: Full embedded JavaScript parsed in V8. Isolated fake-speech checks passed for starting, timeout, late callback ignored, successful start/end and manual stop. These checks do NOT prove Android audible playback or accurate CHamoru pronunciation.
+- TRUST GATE: Reading Studio still labels speech as an experimental English approximation; fluent-speaker review is required before it may be presented as authoritative CHamoru. No vocabulary or pronunciations were certified.
+- NEXT: Verify GitHub Pages deployment of this exact commit, then physically listen on Android (Test Sound, CH, A and Reader). Record actual speaker observations before marking audio VERIFIED.
