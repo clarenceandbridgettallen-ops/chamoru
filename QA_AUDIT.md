@@ -62,3 +62,12 @@
 - TESTED ONLY: Full embedded JavaScript parsed in V8. Isolated fake-speech checks passed for starting, timeout, late callback ignored, successful start/end and manual stop. These checks do NOT prove Android audible playback or accurate CHamoru pronunciation.
 - TRUST GATE: Reading Studio still labels speech as an experimental English approximation; fluent-speaker review is required before it may be presented as authoritative CHamoru. No vocabulary or pronunciations were certified.
 - NEXT: Verify GitHub Pages deployment of this exact commit, then physically listen on Android (Test Sound, CH, A and Reader). Record actual speaker observations before marking audio VERIFIED.
+
+
+## 2026-10-26 UTC | Speaker diagnostic AudioContext watchdog
+
+- INSPECTED: latest public main commit 4c2b345, full index.html speaker diagnostic, phonics helpers and existing QA audit. Site URL could not be independently retrieved through the available web reader; physical Android audio remains unverified.
+- CODE UPDATED: index.html commit 7d41c11998d9f3167db8518a236969ee454ec801. Test Sound now closes an AudioContext if resume never resolves, reports a seven-second timeout, closes the context after a finished beep, and ignores callbacks from an older speaker test after another tap. No CHamoru pronunciation samples, storage keys, rewards, mastery gates, lesson content or navigation were changed.
+- TESTED ONLY: Complete inline JavaScript compiled with Function constructor; four isolated fake-AudioContext scenarios passed (pending resume timeout and cleanup; normal beep completion; second tap ignores stale completion; rejected resume explains blocking). GitHub readback confirmed the changed file. No actual Android speaker output or audible pronunciation was measured. Push-triggered CI status was not exposed by the available GitHub status endpoint.
+- TRUST GATE: The beep is a speaker diagnostic only; English phonetic examples remain unreviewed approximations. Native fluent-speaker review is required before labeling CHamoru pronunciations authoritative.
+- NEXT: Verify physical Android Test Sound/CH/A and reading aloud, then capture device/browser version and speaker observations. Do not equate syntax/CI with audible sound.
