@@ -97,3 +97,13 @@
 - DEPLOYMENT: Pages run 40317586443 for the test commit was still IN PROGRESS when checked. A passing workflow is not proof of audible phone playback.
 - NOT VERIFIED: physical Android speaker output, pronunciation accuracy, real browser navigation or fluent-speaker approval. English speech remains explicitly an approximation.
 - NEXT: Physical Android Test Sound / CH / A/Å / Reading Studio diagnostics; collect device/browser-specific results and fluent CHamoru review before authoritative audio labeling.
+
+
+## 2026-10-26 09:58 Eastern | Stale phoneme timeout regression
+
+- INSPECTED: public main at 040cddcf3e570a18de0d63a6b96b222d60730d66, actual Unit 0 phoneme player in index.html and existing seven simulated-audio regression cases.
+- CODE UPDATED: added a test in scripts/test_phoneme_audio.js, commit 813865a60df58eb74f8de657c345daf294fd0e55. It confirms an older clip's delayed timeout cannot pause a newer clip, replace its status, or clear its active player.
+- TESTED ONLY: executed the actual player source in an isolated JavaScript harness with fake Audio and timers; stale timeout resolved false, new clip completed true, both timers cleared, and no stale warning appeared. This is not a real Android, browser, speaker, or pronunciation test.
+- CI/DEPLOY: GitHub connector returned no push workflow runs/status contexts for this new test commit; do not infer green CI or live deployment. The web reader could not retrieve the public site.
+- NOT VERIFIED: physical Android Test Sound/CH/A/Å/Reading Studio playback, fluent CHamoru speaker approval, complete mobile lesson journeys. Existing storage keys, mastery, navigation and course content unchanged.
+- NEXT: check CI when available; obtain physical Android audible observations and fluent-speaker review before approving pronunciation.
