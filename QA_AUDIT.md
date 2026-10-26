@@ -124,3 +124,5 @@
 - TESTED ONLY: test source and fake Audio behavior reviewed; actual new CI workflow 40353099771 and Pages workflow 40353099821 were IN PROGRESS at first check. Do not call these passed until confirmed.
 - NOT VERIFIED: audible physical Android playback, fluent CHamoru pronunciation, full real-device learning journeys or public website loading. Test Sound remains speaker-only, not pronunciation approval.
 - NEXT: confirm new CI, collect real Android playback observations, then fluent-speaker review of CH/A/Å before publishing pronunciation as authoritative.
+
+- CI FOLLOW-UP (same run): Phoneme audio regression run `40353099771` completed SUCCESS for commit `57d026310e4fe99c96fdb8a515d5db655025a68e`. The initial Pages run was cancelled by the newer audit commit; replacement Pages workflow `40353164853` completed SUCCESS for `5c87696f8019ed545457904f01b58f2b69288b45`. This is automated CI/deploy workflow evidence, not an independently opened website or audible Android confirmation.
