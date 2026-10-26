@@ -569,24 +569,27 @@ function u0PlaySymbol(symbol){
   u0SaySequence(symbol==='H'?['breath']:[symbol],label);
 }
 function u0SoundTest(){
-  u0StopSound();u0SetStatus('Starting speaker test…');
+  u0StopSound();const run=u0PlaybackNumber;u0SetStatus('Starting speaker test…');
   try{
     const AC=window.AudioContext||window.webkitAudioContext;
     if(!AC){u0SetStatus('Audio engine unavailable in this browser. Open in Chrome.');return}
     const ctx=u0AudioContext||(u0AudioContext=new AC());
-    const play=()=>{const osc=ctx.createOscillator(),gain=ctx.createGain();
+    const play=()=>{if(run!==u0PlaybackNumber)return;
+       const osc=ctx.createOscillator(),gain=ctx.createGain();
        osc.type='sine';osc.frequency.setValueAtTime(660,ctx.currentTime);
        gain.gain.setValueAtTime(.0001,ctx.currentTime);
        gain.gain.exponentialRampToValueAtTime(.23,ctx.currentTime+.03);
        gain.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+.32);
        osc.connect(gain);gain.connect(ctx.destination);
-       osc.onended=()=>u0SetStatus('Test tone completed. Did you hear a short beep? If not, open in Chrome and check media volume.');
+       u0ActiveSource=osc;
+       osc.onended=()=>{if(u0ActiveSource===osc)u0ActiveSource=null;
+         if(run===u0PlaybackNumber)u0SetStatus('Test tone completed. Did you hear a short beep? If not, open in Chrome and check media volume.');};
        osc.start();osc.stop(ctx.currentTime+.34);
        u0SetStatus('Playing speaker-test beep (not a CHamoru sound)…');
     };
-    if(ctx.state==='suspended')ctx.resume().then(play).catch(e=>u0SetStatus('Audio blocked: '+e.message));
+    if(ctx.state==='suspended')ctx.resume().then(play).catch(e=>{if(run===u0PlaybackNumber)u0SetStatus('Audio blocked: '+e.message)});
     else play();
-  }catch(e){u0SetStatus('Speaker test failed: '+e.message)}
+  }catch(e){if(run===u0PlaybackNumber)u0SetStatus('Speaker test failed: '+e.message)}
 }
 window.u0SoundTest=u0SoundTest;
 function u0PlayBuild(){if(u0stage===4){u0SetStatus('CHA blend audio is disabled until fluent-speaker review.')}else{u0SaySequence(['breath','ah','hah'],'H → Å → HÅ')}}
