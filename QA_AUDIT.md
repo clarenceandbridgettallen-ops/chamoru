@@ -137,3 +137,10 @@
 - **VERIFIED AUTOMATED TESTS:** GitHub Actions audio regression run `40371972096` completed SUCCESS, with **13/13** Node tests passing. Pages workflow `40371973340` was PENDING/IN PROGRESS at last check. A CI success does not prove that the website loaded independently or that Android sound is audible.
 - **PRESERVED:** Browser progress keys, mastery gates, rewards, course content, storybook, navigation and native-speaker review gate. No English TTS pronunciation was labeled authoritative.
 - **NEXT:** Verify final Pages deployment; physical Android Test Sound/CH/A/Å and Reading Studio playback; obtain fluent CHamoru speaker approval before publishing pronunciation.
+
+
+## 2026-10-26 14:44 Eastern | Live reachability and audio provenance
+- **VERIFIED:** Independent public URL content fetch returned the CHamorU landing page title `CHamorU · Direct MP3 Greeting v4.2`, viewport metadata, and visible introductory text. This establishes successful HTML retrieval only, not an Android browser journey or speaker playback.
+- **TESTED ONLY:** Parsed current `index.html` phoneme-audio mapping as JSON. It contains exactly **two embedded MP3 data URIs**, keys `ts` and `tsa`, both beginning with the `ID3` MP3 signature. Confirmed four navigation labels, sticky Next references, the legacy `chamoru_for_you_unit1_v15` storage key, and a fluent-speaker review warning remain present. A valid header is NOT a decoded audio test or pronunciation approval.
+- **BLOCKED / NEXT:** Actual audible playback of Test Sound, CH, A/Å and Reading Studio requires a physical Android check. Embedded audio inventory is limited and must not be misrepresented as a reviewed full CHamoru phoneme library. No new vocabulary or pronunciation was published; fluent-speaker review gate remains mandatory.
+- **FILES/DEPLOYMENT:** Audit-only update to `QA_AUDIT.md`; app code, progress and public assets unchanged. The fetched public page was reachable, but no new deployment was initiated.
