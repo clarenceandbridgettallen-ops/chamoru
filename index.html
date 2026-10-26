@@ -523,7 +523,7 @@ function u0PlayRecordedPhoneme(phoneme){return new Promise(resolve=>{
   // In-app Android browsers may never report playback completion; release stalled clips.
   const watchdog=setTimeout(()=>{if(u0ActiveClip===audio){u0SetStatus('Sound stalled. Try Test Sound or open in Chrome.');try{audio.pause()}catch(e){}}done(false)},7000);
   function done(ok){if(settled)return;settled=true;clearTimeout(watchdog);if(u0ActiveClip===audio)u0ActiveClip=null;resolve(!!ok)}
-  audio.onended=()=>done(true);
+  audio.onended=()=>done(u0ActiveClip===audio);
   audio.onerror=()=>{if(u0ActiveClip===audio)u0SetStatus('Recorded sound could not load. Try Chrome.');done(false)};
   try{const result=audio.play();if(result&&result.catch)result.catch(()=>{if(u0ActiveClip===audio)u0SetStatus('Audio is blocked. Tap the sound button again after interacting with the page.');done(false)})}
   catch(e){if(u0ActiveClip===audio)u0SetStatus('Audio could not start. Try Chrome.');done(false)}
