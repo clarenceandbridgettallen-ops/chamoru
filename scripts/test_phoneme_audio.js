@@ -80,3 +80,17 @@ test('unavailable Audio constructor offers browser recovery',async()=>{
   assert.match(h.statuses.join(' '),/Audio player unavailable/);
   assert.equal(h.active(),null);
 });
+
+
+test('superseded clip timeout cannot interrupt newer playback',async()=>{
+  const h=setup();const older=h.play('ts');const newer=h.play('ts');
+  h.timers[0].fn();
+  assert.equal(await older,false);
+  assert.equal(h.active(),h.clips[1]);
+  assert.equal(h.statuses.length,0,'Old timeout must not display stale warnings');
+  assert.equal(h.clips[0].paused,false,'Old timeout must not pause the newer clip');
+  h.clips[1].onended();
+  assert.equal(await newer,true);
+  assert.equal(h.active(),null);
+  assert.ok(h.timers.every(t=>t.cleared));
+});
