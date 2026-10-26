@@ -1,8 +1,10 @@
-name: CHamorU phoneme audio regression
+name: CHamorU audio and family voice QA
 on:
   push:
     paths:
       - index.html
+      - voice-studio.js
+      - scripts/test_voice_studio.js
       - scripts/test_phoneme_audio.js
       - .github/workflows/audio-qa.yml
   pull_request:
@@ -20,4 +22,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test scripts/test_phoneme_audio.js
+      - run: node --test scripts/test_phoneme_audio.js scripts/test_voice_studio.js
