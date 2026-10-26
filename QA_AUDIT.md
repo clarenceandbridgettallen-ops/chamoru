@@ -126,3 +126,7 @@
 - NEXT: confirm new CI, collect real Android playback observations, then fluent-speaker review of CH/A/Å before publishing pronunciation as authoritative.
 
 - CI FOLLOW-UP (same run): Phoneme audio regression run `40353099771` completed SUCCESS for commit `57d026310e4fe99c96fdb8a515d5db655025a68e`. The initial Pages run was cancelled by the newer audit commit; replacement Pages workflow `40353164853` completed SUCCESS for `5c87696f8019ed545457904f01b58f2b69288b45`. This is automated CI/deploy workflow evidence, not an independently opened website or audible Android confirmation.
+
+### 2026-10-26 12:44 ET | Superseded phoneme playback
+- CODE UPDATED: Starting another recorded phoneme now pauses and settles the prior clip immediately, rather than leaving overlapping audio active until an old timeout. No progress keys, lessons, or pronunciation assets changed.
+- TESTED ONLY: In-memory fake-Audio behavior confirmed old promise resolves false, prior clip pauses, watchdog clears, and new clip finishes true; repository regression added. Physical Android audibility and fluent pronunciation remain UNVERIFIED.

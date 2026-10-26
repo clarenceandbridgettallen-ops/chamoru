@@ -89,7 +89,7 @@ test('superseded clip timeout cannot interrupt newer playback',async()=>{
   assert.equal(await older,false);
   assert.equal(h.active(),h.clips[1]);
   assert.equal(h.statuses.length,0,'Old timeout must not display stale warnings');
-  assert.equal(h.clips[0].paused,false,'Old timeout must not pause the newer clip');
+  assert.equal(h.clips[0].paused,true,'Superseded audio must be paused immediately');
   h.clips[1].onended();
   assert.equal(await newer,true);
   assert.equal(h.active(),null);
@@ -116,5 +116,16 @@ test('late playback rejection cannot replace status or interrupt a newer clip',a
   assert.equal(h.active(),h.clips[1],'Newer audio remains active');
   h.clips[1].onended();
   assert.equal(await newer,true);
+  assert.ok(h.timers.every(t=>t.cleared));
+});
+
+
+test('new phoneme immediately cancels and settles the previous clip',async()=>{
+  const h=setup();const old=h.play('ts');const newer=h.play('ts');
+  assert.equal(await old,false,'Previous playback should settle immediately');
+  assert.equal(h.clips[0].paused,true);
+  assert.equal(h.timers[0].cleared,true);
+  assert.equal(h.active(),h.clips[1]);
+  h.clips[1].onended();assert.equal(await newer,true);
   assert.ok(h.timers.every(t=>t.cleared));
 });
