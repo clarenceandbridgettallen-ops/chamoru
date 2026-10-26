@@ -154,3 +154,10 @@
 - **NOT VERIFIED:** Audible beep or CH/A pronunciation on a real Android device, complete live mobile journey, fluent CHamoru review, or whether the phone's silent-audio issue is resolved. The Pages workflow is deployment evidence, not proof of audio playback.
 - **NEXT:** Ask an authorized Android tester to tap Test Sound, CH, A/Å, record the exact on-screen diagnostic text and whether sound was heard; keep English-TTS approximations unapproved until fluent-speaker review.
 
+## 2026-10-26 16:44 ET | English example TTS timeout and failure integrity
+
+- Inspected latest public main, existing 15 fake-audio tests, prior successful Pages workflow, and the exact `u0AmericanUtter` / `u0SaySequence` implementations. English TTS previously waited indefinitely if no end/error event arrived and could falsely finish a guided sequence.
+- **CODE UPDATED:** `index.html` commit `f54d9e4` adds a 7-second English-TTS watchdog, explicit unavailable/blocked/error messages, and prevents guided sequences from announcing success after failed English speech. `scripts/test_phoneme_audio.js` commit `a39e37f` adds four synthetic regression checks.
+- **VERIFIED AUTOMATED TESTS:** GitHub Actions audio run `40398235304` completed SUCCESS, **19/19** tests passed. Pages build/deployment workflow `40398235642` completed SUCCESS for `a39e37f`.
+- **NOT VERIFIED:** Actual Android audible playback, physical-device browser permissions, fluent CHamoru pronunciation, full user journey, or independent public-site retrieval. English speech remains an approximation, not authoritative CHamoru.
+- No progress keys, rewards, mastery gates, curriculum content, four primary navigation tabs or Next controls were intentionally changed. Next: device listening and fluent-speaker audio review.
