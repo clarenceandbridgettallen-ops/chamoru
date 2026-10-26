@@ -613,8 +613,30 @@ function u0SoundTest(){
        osc.start();osc.stop(ctx.currentTime+.34);
        u0SetStatus('Playing speaker-test beep (not a CHamoru sound)…');
     };
-    if(ctx.state==='suspended')ctx.resume().then(play).catch(e=>{if(run===u0PlaybackNumber)u0SetStatus('Audio blocked: '+e.message)});
-    else play();
+    if(ctx.state==='suspended'){
+      let pending=true;
+      const watchdog=setTimeout(()=>{
+        if(!pending||run!==u0PlaybackNumber)return;
+        pending=false;
+        if(u0AudioContext===ctx)u0AudioContext=null;
+        try{ctx.close()}catch(e){}
+        u0SetStatus('Speaker test stalled. Try Chrome and check media volume.');
+      },7000);
+      try{
+        ctx.resume().then(()=>{
+          if(!pending)return;
+          pending=false;clearTimeout(watchdog);
+          if(run===u0PlaybackNumber)play();
+        }).catch(e=>{
+          if(!pending)return;
+          pending=false;clearTimeout(watchdog);
+          if(run===u0PlaybackNumber)u0SetStatus('Audio blocked: '+e.message);
+        });
+      }catch(e){
+        pending=false;clearTimeout(watchdog);
+        if(run===u0PlaybackNumber)u0SetStatus('Audio blocked: '+e.message);
+      }
+    }else play();
   }catch(e){if(run===u0PlaybackNumber)u0SetStatus('Speaker test failed: '+e.message)}
 }
 window.u0SoundTest=u0SoundTest;
