@@ -44,7 +44,7 @@ function harness(settings={}){
     stop(){this.state='inactive';this.ondataavailable?.({data:new Blob(['a'.repeat(128)],{type:'audio/webm'})});this.onstop?.()}
   }
   let tracksStopped=0;
-  const getUserMedia=async()=>({getTracks:()=>[{stop:()=>tracksStopped++}]});
+  const getUserMedia=settings.getUserMedia|| (async()=>({getTracks:()=>[{stop:()=>tracksStopped++}]}));
   const c={console,Blob,Uint8Array,Promise,setTimeout,clearTimeout,
     indexedDB,MediaRecorder:Recorder,Audio,
     navigator:{mediaDevices:settings.noMic?null:{getUserMedia}},
@@ -95,4 +95,28 @@ test('invalid or oversized recordings never become saved',async()=>{
 test('recorded words are never claimed as verified native pronunciation',()=>{
   assert.match(source,/not independently certified/i);
   assert.match(source,/never uploaded automatically/i);
+});
+
+// A cancelled permission prompt may resolve after another request for the same word.
+// The stale microphone stream must be closed, never used to start a recorder.
+test('pending microphone can cancel and stale same-word permission cannot start recording',async()=>{
+  const pending=[];let stopped=0;
+  const h=harness({getUserMedia:()=>new Promise(resolve=>pending.push(resolve))});
+  const stream=()=>({getTracks:()=>[{stop:()=>stopped++}]});
+  h.c.voiceStudio();await h.tick();
+  const first=h.c.CHVoice.start('mother');await h.tick();
+  assert.match(h.nodes.get('voiceStudioList').innerHTML,/Cancel microphone request/);
+  h.c.CHVoice.cancel();pending[0](stream());await first;await h.tick();
+  assert.equal(stopped,1);
+  assert.doesNotMatch(h.nodes.get('voiceStudioList').innerHTML,/Stop & Save/);
+  const old=h.c.CHVoice.start('mother');await h.tick();h.c.CHVoice.cancel();
+  const fresh=h.c.CHVoice.start('mother');await h.tick();
+  pending[1](stream());await old;await h.tick();
+  assert.equal(stopped,2);
+  assert.match(h.nodes.get('voiceStudioList').innerHTML,/Cancel microphone request/);
+  pending[2](stream());await fresh;await h.tick();
+  assert.match(h.nodes.get('voiceStudioList').innerHTML,/Stop & Save/);
+  h.c.CHVoice.finish();await h.tick();
+  assert.equal(stopped,3);
+  assert.ok(h.records.has('mother'));
 });
