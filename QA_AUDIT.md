@@ -31,3 +31,15 @@
 - NOT VERIFIED: sound heard on Android, real MP3 decoding on an in-app browser, complete lesson journeys, or fluent CHamoru pronunciation. The embedded clip is still labeled computer-generated approximation, not native-reviewed.
 - Data/UX: no progress keys, navigation, mastery, rewards or curriculum changed.
 - Next: obtain real Android Test Sound / greeting observations and fluent-speaker review before declaring audio or pronunciation correct.
+
+
+## 2026-10-26 UTC | Direct CH phonics playback watchdog
+
+- Inspected current index.html, existing Unit 0 recorded-phoneme helper, recent main commits, and the latest Pages workflow history.
+- Code commit: 701c44417e309f739fe1f25b63be04c35a577349.
+- Fixed: the direct CH phonics button now uses the same seven-second stalled-media watchdog as sequential recorded phonemes. Ended/error/timeout settle exactly once; a stopped or replaced attempt cannot overwrite newer status. Successful clip completion is explicitly labeled an unreviewed approximation.
+- Verified before commit: three simulated Audio outcomes (ended, stalled timeout, decode error), status feedback, and JavaScript parsing of the CH symbol handler. No real audio output was measured.
+- Pages deployment run 40275956567 was in progress at this audit entry. Its completion and the final audit commit's deployment must be checked independently.
+- NOT VERIFIED: actual Android in-app sound, user hearing the clip, accurate CHamoru phonetics, or full course journeys. Fluent CHamoru speaker review remains mandatory.
+- Preserved: progress keys, navigation, rewards, mastery gates, lessons, and storybook. No paid tools or unapproved content.
+- Next: verify actual Android speaker test and CH playback; check GitHub Pages workflow; pursue fluent-speaker review.
