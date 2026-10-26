@@ -85,7 +85,8 @@ async function start(id){
    const idToSave=currentId,type=rec&&rec.mimeType||mime||'audio/webm';
    currentId=null;rec=null;clearMic();
    const blob=new Blob(parts,{type});parts=[];
-   try{if(idToSave)await save(idToSave,blob);status('Saved '+phrase(idToSave)[1]+'. Tap Play to check it.')}
+   if(!idToSave){status('Recording ended without saving.');render();return}
+   try{await save(idToSave,blob);status('Saved '+phrase(idToSave)[1]+'. Tap Play to check it.')}
    catch(e){status('Recording not saved: '+e.message)}
    render();
   };
@@ -99,7 +100,7 @@ async function exportAll(){
  try{status('Preparing voice pack…');const clips=await storedAll();if(!clips.length){status('Record at least one word before exporting.');return}
   const data=[];for(const clip of clips)data.push({id:clip.id,data:await asDataURL(clip.blob)});
   const json=JSON.stringify({format:'CHamorU-voicepack-v1',clips:data});
-  if(json.length>27*1024*1024)throw Error('Pack too large');
+  if(json.length>40*1024*1024)throw Error('Pack too large');
   const url=URL.createObjectURL(new Blob([json],{type:'application/json'}));
   const a=document.createElement('a');a.download='CHamorU-Family-Voice-Pack.json';a.href=url;document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),3000);status('Voice pack download started. Share it only with family you trust.');
@@ -108,7 +109,7 @@ async function exportAll(){
 async function importAll(input){
  const file=input.files&&input.files[0];if(!file)return;
  try{
-  if(file.size>27*1024*1024)throw Error('File exceeds 27 MB');
+  if(file.size>40*1024*1024)throw Error('File exceeds 27 MB');
   const pack=JSON.parse(await file.text());
   if(pack.format!=='CHamorU-voicepack-v1'||!Array.isArray(pack.clips)||pack.clips.length>WORDS.length)throw Error('Wrong voice-pack format');
   if(!confirm('Import '+pack.clips.length+' voice recordings? Existing matching words will be replaced.'))return;
@@ -147,6 +148,20 @@ function open(){
  '</section><div class="stickybar"><button class="secondary" onclick="guidedPractice()">← Back</button><button class="primary" onclick="continueLearning()">NEXT: Continue learning →</button></div>';
  render();
 }
+
+// Don't leave the microphone open while moving to another learning screen.
+if(document.addEventListener)document.addEventListener('click',function(ev){
+ if(!currentId)return;
+ const target=ev.target;
+ if(target&&target.closest&&target.closest('.guide-nav, .stickybar')){
+  ev.preventDefault();ev.stopImmediatePropagation();status('Tap Stop & Save before leaving this screen.');
+ }
+},true);
+if(global.addEventListener)global.addEventListener('pagehide',function(){
+ if(rec&&rec.state==='recording'){try{rec.stop()}catch(e){}}
+ clearMic();stopAudio();
+});
+
 global.CHVoice={open,render,start,finish,replay,erase,exportAll,importAll,playWord,stored,save,storedAll,stopAudio,phrase};
 global.voiceStudio=open;
 global.playVocab=playWord;
