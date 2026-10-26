@@ -107,3 +107,12 @@
 - CI/DEPLOY: GitHub connector returned no push workflow runs/status contexts for this new test commit; do not infer green CI or live deployment. The web reader could not retrieve the public site.
 - NOT VERIFIED: physical Android Test Sound/CH/A/Å/Reading Studio playback, fluent CHamoru speaker approval, complete mobile lesson journeys. Existing storage keys, mastery, navigation and course content unchanged.
 - NEXT: check CI when available; obtain physical Android audible observations and fluent-speaker review before approving pronunciation.
+
+
+## 2026-10-26 10:44 Eastern | Superseded audio completion regression
+
+- INSPECTED: current main phoneme player, eight behavioral regression cases, latest commit and GitHub Actions. Physical Android speaker output remains unverified.
+- CODE UPDATED: `index.html` commit `98c24185a33fdcb4116c0b6945c3a2aad50c2045` now treats an `onended` event from a replaced clip as unsuccessful instead of advancing a stale playback. `scripts/test_phoneme_audio.js` commit `09cd541a0f7f58af597febc5556f8c6cf5aba3d9` adds a matching regression.
+- TESTED: Pre-commit simulation confirmed older completion=false, newer completion=true, active player preserved, timers cleared and no stale warning. GitHub Actions audio regression run 40342955097 completed SUCCESS; Pages workflow 40342933022 completed SUCCESS for test commit. Workflow success is not an independently loaded site or audible phone test.
+- PRESERVED: Local progress keys, rewards, mastery gates, course content, navigation, storybook, and fluent-speaker approval gate unchanged.
+- NEXT: Physical Android Test Sound/CH/A/Å/Reading Studio observations in Chrome and in-app browser; review audio with a fluent CHamoru speaker before labeling authoritative.
