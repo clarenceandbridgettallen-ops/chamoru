@@ -130,21 +130,38 @@ function chosenVoice(){const vs=findVoices(), p=extra.voicePreset; if(p==='auto'
 let chLessonVoiceRun=0,chLessonUtterance=null,chLessonTimer=null;
 function lessonAudioStatus(message){const el=document.getElementById('audioStatus');if(el)el.textContent=message;}
 function stopLessonVoice(){chLessonVoiceRun++;if(chLessonTimer){clearTimeout(chLessonTimer);chLessonTimer=null}chLessonUtterance=null;if('speechSynthesis' in window)try{speechSynthesis.cancel()}catch(e){}}
+let lessonSpeakerTestCleanup=null;
 function lessonSpeakerTest(){
+  // A second tap cancels the first test; late resume/onended callbacks cannot change its result.
+  if(lessonSpeakerTestCleanup)lessonSpeakerTestCleanup();
   stopLessonVoice();lessonAudioStatus('Starting speaker test…');
-  try{
-    const AC=window.AudioContext||window.webkitAudioContext;
-    if(!AC){lessonAudioStatus('Audio test unsupported here. Open this website in Chrome.');return}
-    const ctx=new AC();
-    const start=()=>{const tone=ctx.createOscillator(),volume=ctx.createGain();tone.type='sine';tone.frequency.value=720;
+  const AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC){lessonAudioStatus('Audio test unsupported here. Open this website in Chrome.');return}
+  let ctx=null,watchdog=null,done=false,started=false;
+  const cleanup=()=>{
+    if(watchdog!==null){clearTimeout(watchdog);watchdog=null}
+    if(lessonSpeakerTestCleanup===cleanup)lessonSpeakerTestCleanup=null;
+    if(ctx)try{Promise.resolve(ctx.close()).catch(()=>{})}catch(e){}
+  };
+  lessonSpeakerTestCleanup=cleanup;
+  const fail=message=>{if(done||lessonSpeakerTestCleanup!==cleanup)return;done=true;cleanup();lessonAudioStatus(message)};
+  const start=()=>{
+    if(done||lessonSpeakerTestCleanup!==cleanup)return;
+    try{
+      const tone=ctx.createOscillator(),volume=ctx.createGain();tone.type='sine';tone.frequency.value=720;
       volume.gain.setValueAtTime(.001,ctx.currentTime);volume.gain.exponentialRampToValueAtTime(.22,ctx.currentTime+.03);
       volume.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.38);tone.connect(volume);volume.connect(ctx.destination);
-      tone.onended=()=>{lessonAudioStatus('Beep test finished. If you heard no beep, check media volume and open in Chrome.');ctx.close().catch(()=>{})};
-      tone.start();tone.stop(ctx.currentTime+.4);lessonAudioStatus('Playing short test beep. This is not a pronunciation sample.');
-    };
-    if(ctx.state==='suspended')ctx.resume().then(start).catch(e=>lessonAudioStatus('Audio blocked: '+e.message));
+      tone.onended=()=>{if(done||lessonSpeakerTestCleanup!==cleanup)return;done=true;cleanup();lessonAudioStatus('Beep test finished. If you heard no beep, check media volume and open in Chrome.')};
+      tone.start();started=true;tone.stop(ctx.currentTime+.4);
+      lessonAudioStatus('Playing short test beep. This is not a pronunciation sample.');
+    }catch(e){fail('Speaker test error: '+e.message)}
+  };
+  try{
+    ctx=new AC();
+    watchdog=setTimeout(()=>fail(started?'Speaker test did not finish. Try Chrome.':'Speaker test did not start within 7 seconds. Check media volume and try Chrome.'),7000);
+    if(ctx.state==='suspended')Promise.resolve(ctx.resume()).then(start).catch(e=>fail('Audio blocked: '+e.message));
     else start();
-  }catch(e){lessonAudioStatus('Speaker test error: '+e.message)}
+  }catch(e){fail('Speaker test error: '+e.message)}
 }
 
 // Local self-generated demonstration audio. English phonetic TTS, not verified CHamoru.
