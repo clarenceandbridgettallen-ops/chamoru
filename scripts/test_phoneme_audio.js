@@ -94,3 +94,14 @@ test('superseded clip timeout cannot interrupt newer playback',async()=>{
   assert.equal(h.active(),null);
   assert.ok(h.timers.every(t=>t.cleared));
 });
+
+
+test('late completion from superseded clip cannot count as success',async()=>{
+  const h=setup();const older=h.play('ts');const newer=h.play('ts');
+  h.clips[0].onended();
+  assert.equal(await older,false,'Old clip must not report success after replacement');
+  assert.equal(h.active(),h.clips[1],'Newer clip must stay active');
+  h.clips[1].onended();
+  assert.equal(await newer,true);
+  assert.ok(h.timers.every(t=>t.cleared));
+});
