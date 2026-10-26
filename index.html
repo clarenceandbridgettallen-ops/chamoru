@@ -436,7 +436,17 @@ function u0StopSound(){u0PlaybackNumber++;if(u0ActiveClip){u0ActiveClip.pause();
 // An English H is a brief, unvoiced breath, NOT the spoken name of the letter.
 function u0Breath(){return new Promise(resolve=>{try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC){resolve();return}const ctx=u0AudioContext||(u0AudioContext=new AC());if(ctx.state==='suspended')ctx.resume();const duration=.27,buffer=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*duration),ctx.sampleRate),data=buffer.getChannelData(0);for(let i=0;i<data.length;i++){const t=i/data.length;data[i]=(Math.random()*2-1)*.10*Math.sin(Math.PI*t)}const src=ctx.createBufferSource(),highpass=ctx.createBiquadFilter(),gain=ctx.createGain();highpass.type='highpass';highpass.frequency.value=650;gain.gain.value=.32;src.buffer=buffer;src.connect(highpass);highpass.connect(gain);gain.connect(ctx.destination);u0ActiveSource=src;src.onended=()=>{if(u0ActiveSource===src)u0ActiveSource=null;resolve()};src.start();}catch(e){resolve()}})}
 function u0AmericanUtter(text){return new Promise(resolve=>{if(!('speechSynthesis' in window)||typeof SpeechSynthesisUtterance==='undefined'){resolve();return}const u=new SpeechSynthesisUtterance(text),voice=u0USVoice();if(voice){u.voice=voice;u.lang=voice.lang}else u.lang='en-US';u.rate=.72;u.pitch=1;u.onend=resolve;u.onerror=resolve;speechSynthesis.speak(u)})}
-function u0PlayRecordedPhoneme(phoneme){return new Promise(resolve=>{const url=U0_PHONEME_AUDIO[phoneme];if(!url){resolve();return}const audio=new Audio(url);u0ActiveClip=audio;let settled=false;function done(){if(settled)return;settled=true;if(u0ActiveClip===audio)u0ActiveClip=null;resolve()}audio.onended=done;audio.onerror=done;const result=audio.play();if(result&&result.catch)result.catch(()=>{u0SetStatus('Audio is blocked. Tap the sound button again after interacting with the page.');done()});})}
+function u0PlayRecordedPhoneme(phoneme){return new Promise(resolve=>{
+  const url=U0_PHONEME_AUDIO[phoneme];if(!url){resolve();return}
+  const audio=new Audio(url);u0ActiveClip=audio;let settled=false;
+  // Some Android in-app browsers never fire ended/error after a stalled play.
+  const watchdog=setTimeout(()=>{if(u0ActiveClip===audio){u0SetStatus('Sound stalled. Try Test Sound or open in Chrome.');try{audio.pause()}catch(e){}}done()},7000);
+  function done(){if(settled)return;settled=true;clearTimeout(watchdog);if(u0ActiveClip===audio)u0ActiveClip=null;resolve()}
+  audio.onended=done;
+  audio.onerror=()=>{if(u0ActiveClip===audio)u0SetStatus('Recorded sound could not load. Try Chrome.');done()};
+  try{const result=audio.play();if(result&&result.catch)result.catch(()=>{if(u0ActiveClip===audio)u0SetStatus('Audio is blocked. Tap the sound button again after interacting with the page.');done()})}
+  catch(e){if(u0ActiveClip===audio)u0SetStatus('Audio could not start. Try Chrome.');done()}
+})}
 async function u0SaySequence(items,label){if(!('speechSynthesis' in window)&&items.every(item=>!U0_PHONEME_AUDIO[item])){u0SetStatus('Voice playback is unavailable in this browser. Try Chrome.');return}u0StopSound();const run=u0PlaybackNumber;u0SetStatus('Playing: '+label+' · American-English approximation');for(const item of items){if(run!==u0PlaybackNumber)return;if(item==='breath')await u0Breath();else if(U0_PHONEME_AUDIO[item])await u0PlayRecordedPhoneme(item);else await u0AmericanUtter(item);if(run!==u0PlaybackNumber)return;await new Promise(r=>setTimeout(r,140))}if(run===u0PlaybackNumber)u0SetStatus('Finished. Sounds are approximations; fluent CHamoru review is still needed.')}
 function u0PlaySymbol(symbol){
   u0StopSound();
