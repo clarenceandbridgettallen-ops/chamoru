@@ -161,3 +161,12 @@
 - **VERIFIED AUTOMATED TESTS:** GitHub Actions audio run `40398235304` completed SUCCESS, **19/19** tests passed. Pages build/deployment workflow `40398235642` completed SUCCESS for `a39e37f`.
 - **NOT VERIFIED:** Actual Android audible playback, physical-device browser permissions, fluent CHamoru pronunciation, full user journey, or independent public-site retrieval. English speech remains an approximation, not authoritative CHamoru.
 - No progress keys, rewards, mastery gates, curriculum content, four primary navigation tabs or Next controls were intentionally changed. Next: device listening and fluent-speaker audio review.
+
+
+## 2026-10-26 17:47 ET | Android vowel voice constructor failure recovery
+
+- **INSPECTED:** Current main source, 19 prior phoneme regression tests, actual A/Å symbol handler, latest GitHub Actions and public Pages workflow. The vowel button previously created `SpeechSynthesisUtterance('ah')` outside the guarded speak block, so an Android WebView constructor exception could escape without visible recovery.
+- **CODE UPDATED:** `index.html` commit `ddf9f42bbeedeb0df295da8c4708d8de5746576c` catches a throwing speech constructor for A and Å and displays “Vowel voice unavailable. Try Test Sound or open in Chrome.” No pronunciation claims, new content, progress keys, rewards, mastery gates or navigation changes.
+- **TESTED:** Isolated V8 execution of the actual updated symbol handler with a throwing constructor for both A and Å passed (2/2 user-visible recovery cases, no uncaught exception). `scripts/test_phoneme_audio.js` commit `f4d006f47ea61b2f6923182df27782ce95ac9328` adds a permanent Node VM regression. GitHub Actions audio regression run `40407355302` completed SUCCESS; Pages build/deployment workflow `40407356096` also completed SUCCESS.
+- **NOT VERIFIED:** Actual audible Android sound, fluent CHamoru pronunciation, or independent public mobile-browser playback. GitHub deployment workflow success is not proof of physical sound or complete lesson journeys.
+- **NEXT:** Have a real Android listener try Test Sound → CH → A/Å and capture which control audibly works. Replace unreviewed pronunciation only after fluent CHamoru speaker approval.
