@@ -200,10 +200,12 @@ async function importAll(input){
   let count=0;
   for(const entry of pack.clips){
    if(!entry||!phrase(entry.id)||typeof entry.data!=='string'||entry.data.length>MAX*1.5)continue;
-   const match=entry.data.match(/^data:(audio\/(?:webm|mp4|ogg|wav|mpeg));base64,([A-Za-z0-9+/=]+)$/i);if(!match)continue;
-   const raw=atob(match[2]);if(raw.length<64||raw.length>MAX)continue;
+   const match=entry.data.match(/^data:(audio\/(?:webm|mp4|ogg|wav|mpeg))(?:;codecs=([A-Za-z0-9._-]+(?:,[A-Za-z0-9._-]+)*))?;base64,([A-Za-z0-9+/=]+)$/i);if(!match)continue;
+   // MediaRecorder commonly exports audio/webm;codecs=opus. Preserve the codec
+   // during import while still rejecting unrelated or untrusted MIME parameters.
+   const raw=atob(match[3]);if(raw.length<64||raw.length>MAX)continue;
    const bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
-   await save(entry.id,new Blob([bytes],{type:match[1]}));count++;
+   await save(entry.id,new Blob([bytes],{type:match[1]+(match[2]?';codecs='+match[2]:'')}));count++;
   }
   status('Imported '+count+' audio recording(s) to this device.');await render();
  }catch(e){status('Import error: '+e.message)}finally{input.value=''}
