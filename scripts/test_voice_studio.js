@@ -11,6 +11,8 @@ test('app integrates recording studio and routes vocabulary through family voice
   assert.match(html,/function vocabularyCard\(v,n\)[\s\S]{0,1500}playVocab/);
   assert.match(html,/function guidedPractice\(\)[\s\S]{0,1400}Family Voice Studio/);
   assert.match(html,/onclick="voiceStudio\(\)"/);
+  assert.match(html,/CHVoice\.playLine\(/);
+  assert.match(html,/function readerSpeakLine\(p,i\)[\s\S]{0,190}CHVoice\.playLine/);
   assert.match(source,/chamoru-family-voice-v1/);
   assert.doesNotMatch(source,/\bfetch\s*\(|XMLHttpRequest|sendBeacon/);
 });
@@ -33,7 +35,7 @@ function harness(settings={}){
   };
   const indexedDB={open(){const q={result:db};queueMicrotask(()=>q.onsuccess?.());return q}};
   class Audio{constructor(url){this.url=url;this.volume=1;this.playbackRate=1;audio.push(this)}
-    play(){played.push(this);return Promise.resolve()}
+    play(){played.push(this);this.onplaying?.();return Promise.resolve()}
     pause(){this.paused=true}
     removeAttribute(){}load(){}
   }
@@ -60,21 +62,44 @@ function harness(settings={}){
   const tick=async()=>{for(let i=0;i<15;i++)await Promise.resolve()};
   return {c,records,played,status,nodes,tick,tracksStopped:()=>tracksStopped};
 }
-test('studio opens with eight phrases, visible Next and no network actions',async()=>{
+test('studio opens with lesson and conversation phrases, visible Next and no network actions',async()=>{
   const h=harness();h.c.voiceStudio();await h.tick();
   assert.match(h.c.APP.innerHTML,/Record our language/);
   assert.match(h.c.APP.innerHTML,/NEXT: Continue learning/);
   assert.match(h.nodes.get('voiceStudioList').innerHTML,/Nåna/);
   assert.match(h.nodes.get('voiceStudioList').innerHTML,/Håfa adai!/);
+  assert.match(h.nodes.get('voiceStudioList').innerHTML,/Kao siña un ayuda yo/);
 });
-test('no saved voice uses legacy greeting and does not pretend sound is validated',async()=>{
-  const h=harness();await h.c.playVocab('Håfa adai!','Håfa adai!',false);await h.tick();
-  assert.deepEqual(h.status.at(-1),['greeting',false]);
+test('no family recording never triggers known-silent browser TTS',async()=>{
+  const h=harness();await h.tick();h.c.playVocab('Håfa adai!','Håfa adai!',false);
   assert.equal(h.played.length,0);
+  assert.equal(h.status.some(x=>x[0]==='tts'||x[0]==='greeting'),false);
+  assert.match(h.nodes.get('audioStatus').textContent,/No family recording/);
+});
+test('cached voice begins playing on same tap, before any IndexedDB await',async()=>{
+  const h=harness();await h.tick();
+  await h.c.CHVoice.save('hafa',new Blob(['x'.repeat(128)],{type:'audio/webm'}));
+  h.c.playVocab('Håfa adai!','Håfa adai!',false);
+  assert.equal(h.played.length,1,'The audio play request must happen synchronously');
+});
+test('conversation and reader replay use cached recordings, not device TTS',async()=>{
+  const h=harness();await h.tick();
+  await h.c.CHVoice.save('howareyou',new Blob(['x'.repeat(128)],{type:'audio/webm'}));
+  await h.c.CHVoice.save('canhelp',new Blob(['y'.repeat(128)],{type:'audio/webm'}));
+  assert.equal(h.c.CHVoice.playLine('Håfa tatatmanu hao?'),true);
+  assert.equal(h.c.CHVoice.playLine('Kao siña un ayuda yo’? ',false,'reader-audio'),true);
+  assert.equal(h.played.length,2);
+  assert.equal(h.status.some(x=>x[0]==='tts'),false);
+  assert.match(h.nodes.get('reader-audio').textContent,/Starting saved family voice/);
+});
+test('unrecorded conversation gives a readable explanation instead of silent synth',async()=>{
+  const h=harness();await h.tick();
+  assert.equal(h.c.CHVoice.playLine('Unknown phrase'),false);
+  assert.match(h.nodes.get('audioStatus').textContent,/No saved voice entry/);
 });
 test('saved voice wins over the silent browser text-to-speech engine',async()=>{
-  const h=harness();await h.c.CHVoice.save('yes',new Blob(['z'.repeat(128)],{type:'audio/webm'}));
-  await h.c.playVocab('Hunggan.','Hunggan.',false);await h.tick();
+  const h=harness();await h.tick();await h.c.CHVoice.save('yes',new Blob(['z'.repeat(128)],{type:'audio/webm'}));
+  h.c.playVocab('Hunggan.','Hunggan.',false);await h.tick();
   assert.equal(h.played.length,1);
   assert.equal(h.played[0].playbackRate,1);
   assert.equal(h.status.some(x=>x[0]==='tts'),false);
