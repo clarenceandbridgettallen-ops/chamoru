@@ -10,7 +10,7 @@ const WORDS=[['hafa','Håfa adai!','Hello'],['thanks','Si Yu’os ma’åse’.'
  ['welcome','Buen probechu.','You are welcome · dialogue, spelling pending fluent review']];
 const DB='chamoru-family-voice-v1',MAX=3*1024*1024;
 let dbPromise=null,rec=null,stream=null,parts=[],currentId=null,limitTimer=null,player=null,audioUrl=null,playSeq=0,micSeq=0,pendingMic=false,message='',audioTimer=null;
-const clipCache=new Map();let cacheReady=false,cachePromise=null;
+const clipCache=new Map(),cacheTouched=new Set();let cacheReady=false,cachePromise=null;
 const SOUND_CHECK_KEY='chamoru-device-audio-check-v1';
 let lastPlayedId=null,voiceFilter='starter';const soundChecks=(()=>{
  try{return JSON.parse(localStorage.getItem(SOUND_CHECK_KEY)||'{}')||{}}catch(e){return {}}
@@ -71,14 +71,14 @@ async function save(id,blob){
  const db=await database();return new Promise((resolve,reject)=>{
   const tx=db.transaction('clips','readwrite');
   tx.objectStore('clips').put({id,blob,mime:blob.type||'audio/webm',savedAt:new Date().toISOString()});
-  tx.oncomplete=()=>{clipCache.set(id,blob);invalidateSoundCheck(id);resolve()};tx.onerror=()=>reject(tx.error||Error('Storage failed'));tx.onabort=()=>reject(tx.error||Error('Save interrupted'));
+  tx.oncomplete=()=>{cacheTouched.add(id);clipCache.set(id,blob);invalidateSoundCheck(id);resolve()};tx.onerror=()=>reject(tx.error||Error('Storage failed'));tx.onabort=()=>reject(tx.error||Error('Save interrupted'));
  });
 }
 async function erase(id){
  if(!phrase(id))return;
  if(!global.confirm('Delete your saved recording of '+phrase(id)[1]+'?'))return;
  stopAudio();
- try{const db=await database();await new Promise((res,rej)=>{const tx=db.transaction('clips','readwrite');tx.objectStore('clips').delete(id);tx.oncomplete=()=>{clipCache.delete(id);invalidateSoundCheck(id);res()};tx.onerror=()=>rej(tx.error)});status('Recording deleted.');await render()}
+ try{const db=await database();await new Promise((res,rej)=>{const tx=db.transaction('clips','readwrite');tx.objectStore('clips').delete(id);tx.oncomplete=()=>{cacheTouched.add(id);clipCache.delete(id);invalidateSoundCheck(id);res()};tx.onerror=()=>rej(tx.error)});status('Recording deleted.');await render()}
  catch(e){status('Delete failed: '+e.message)}
 }
 
@@ -87,7 +87,7 @@ async function erase(id){
 function warm(){
  if(cachePromise)return cachePromise;
  cachePromise=storedAll().then(rows=>{
-  for(const item of rows){if(item&&item.blob&&item.blob.size&&item.blob.size<=MAX)clipCache.set(item.id,item.blob)}
+  for(const item of rows){if(item&&item.blob&&item.blob.size&&item.blob.size<=MAX&&!cacheTouched.has(item.id))clipCache.set(item.id,item.blob)}
   cacheReady=true;return clipCache.size;
  }).catch(e=>{cachePromise=null;cacheReady=false;throw e});
  return cachePromise;
