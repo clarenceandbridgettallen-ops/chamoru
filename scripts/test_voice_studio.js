@@ -290,7 +290,8 @@ test('late voice-cache warmup preserves replacement and deletion',async()=>{
 });
 
 test('failed multi-clip import does not partially overwrite existing family recordings',async()=>{
- const h=harness({failPutOnId:'yes'});h.c.voiceStudio();await h.tick();
+ const h=harness({failPutOnId:'yes'});h.c.atob=s=>Buffer.from(s,'base64').toString('binary');
+ h.c.voiceStudio();await h.tick();
  const original=new Blob(['original'.repeat(30)],{type:'audio/webm'});
  await h.c.CHVoice.save('hafa',original);
  const payload=Buffer.from('replacement'.repeat(20)).toString('base64');
