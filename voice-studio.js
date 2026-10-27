@@ -200,6 +200,7 @@ function cancel(){if(!pendingMic)return;micSeq++;pendingMic=false;currentId=null
 function finish(){if(rec&&rec.state!=='inactive')try{rec.stop()}catch(e){status('Could not stop: '+e.message);currentId=null;clearMic()}}
 const asDataURL=blob=>new Promise((res,rej)=>{const reader=new FileReader();reader.onload=()=>res(reader.result);reader.onerror=()=>rej(Error('Cannot encode audio'));reader.readAsDataURL(blob)});
 async function exportAll(){
+ if(currentId){status('Finish recording or cancel the microphone request before exporting voices.');return}
  try{status('Preparing voice pack…');const clips=await storedAll();if(!clips.length){status('Record at least one word before exporting.');return}
   const data=[];for(const clip of clips)data.push({id:clip.id,data:await asDataURL(clip.blob)});
   const json=JSON.stringify({format:'CHamorU-voicepack-v1',clips:data});
@@ -210,6 +211,7 @@ async function exportAll(){
  }catch(e){status('Export error: '+e.message)}
 }
 async function importAll(input){
+ if(currentId){status('Finish recording or cancel the microphone request before importing voices.');if(input)input.value='';return}
  const file=input.files&&input.files[0];if(!file)return;
  try{
   if(file.size>60*1024*1024)throw Error('File exceeds 60 MB');
