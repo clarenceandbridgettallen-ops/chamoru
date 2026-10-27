@@ -98,7 +98,7 @@ async function erase(id){
  if(!phrase(id))return;
  if(!global.confirm('Delete your saved recording of '+phrase(id)[1]+'?'))return;
  stopAudio();
- try{const db=await database();await new Promise((res,rej)=>{const tx=db.transaction('clips','readwrite');tx.objectStore('clips').delete(id);tx.oncomplete=()=>{cacheTouched.add(id);clipCache.delete(id);invalidateSoundCheck(id);res()};tx.onerror=()=>rej(tx.error)});status('Recording deleted.');await render()}
+ try{const db=await database();await new Promise((res,rej)=>{const tx=db.transaction('clips','readwrite');tx.objectStore('clips').delete(id);tx.oncomplete=()=>{cacheTouched.add(id);clipCache.delete(id);invalidateSoundCheck(id);res()};tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error||Error('Delete interrupted'))});status('Recording deleted.');await render()}
  catch(e){status('Delete failed: '+e.message)}
 }
 
