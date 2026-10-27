@@ -217,6 +217,25 @@ test('voice packs with MediaRecorder codec MIME types import without silently lo
 });
 
 
+test('duplicate phrase IDs reject a voice pack before replacing any saved family audio',async()=>{
+ const h=harness();h.c.voiceStudio();await h.tick();
+ const original=new Blob(['original'.repeat(30)],{type:'audio/webm'});
+ await h.c.CHVoice.save('hafa',original);
+ const payload=Buffer.from('replacement'.repeat(20)).toString('base64');
+ const pack=JSON.stringify({format:'CHamorU-voicepack-v1',clips:[
+  {id:'hafa',data:'data:audio/webm;base64,'+payload},
+  {id:'yes',data:'data:audio/webm;base64,'+payload},
+  {id:'hafa',data:'data:audio/webm;base64,'+payload}
+ ]});
+ const input={files:[{size:pack.length,text:async()=>pack}],value:'selected'};
+ await h.c.CHVoice.importAll(input);await h.tick();
+ assert.equal(h.records.size,1,'Duplicate pack must not partially import other entries');
+ assert.equal(h.records.get('hafa').blob,original,'Existing family recording must remain intact');
+ assert.equal(h.records.has('yes'),false);
+ assert.match(h.nodes.get('voiceStudioStatus').textContent,/Voice pack repeats a phrase/);
+ assert.equal(input.value,'');
+});
+
 test('corrupt voice-pack clip is skipped without blocking later valid recordings',async()=>{
  const h=harness();h.c.voiceStudio();await h.tick();
  const payload=Buffer.from('v'.repeat(128)).toString('base64');
