@@ -1,5 +1,19 @@
 # CHamorU QA Audit
 
+## 2026-10-26 | Family Voices in Conversations v4.6
+
+**Outcome: CODE UPDATED + DEPLOYMENT VERIFIED + SIMULATED TESTS PASSED. Physical Android audio remains unverified.**
+
+- **Release:** GitHub Pages served public page title `CHamorU · Family Voices in Conversations v4.6` and separate `voice-studio.js`. Public Actions deployment run [40428359379](https://github.com/clarenceandbridgettallen-ops/chamoru/actions/runs/40428359379) succeeded for code commit `d1d54a737` (after module/test changes). New workflow run [40428358851](https://github.com/clarenceandbridgettallen-ops/chamoru/actions/runs/40428358851) completed success. CI test workflow continues to run phoneme, voice-studio and Unit 2 randomized-recall suites.
+- **Root cause addressed:** Previously, stored voices were retrieved through IndexedDB before each `Audio.play()`, risking loss of Android's tap user-activation window. `voice-studio.js` now preloads saved Blob clips on startup into a small in-memory cache; user click can synchronously create a local object URL and begin `Audio.play()` without awaiting storage. Saves/imports update the cache, deleting a clip removes it, and navigation stops old playback.
+- **Lesson coverage:** `index.html` now uses saved family voices for guided/legacy dialogues, family quest and Reading Studio phrases. Unrecorded lines show a clear text-only explanation; no failed text-to-speech playback is represented as audible. Original lesson navigation, local progress, XP, mastery, reader bookmarks, all existing keys preserved.
+- **Voice corpus:** Expanded from 8 to 14 existing lesson/dialogue expressions, with a mobile filter for Starter + Family (8) vs Conversations (6). Existing audio IDs were not renamed and voice-pack format remains backward-compatible. Legacy spellings such as `Si Yu’us ma’åse’` and `Buen probechu` are retained as distinct text pending fluent-speaker review; no silent spellings are merged.
+- **User-confirmed playback check:** Voice Studio asks `Yes, I heard it` or `Still silent` after playback begins and stores a per-device technical result in `chamoru-device-audio-check-v1` localStorage. This does **not** establish verified pronunciation, listening proficiency or microphone functionality on a physical Android device. No audio is uploaded or sent to any external API.
+- **Tests:** 17/17 isolated V8 behavioral tests passed against source as fetched from GitHub (13 voice-studio tests + 4 Unit 2 mastery tests). Verified synchronous start without IndexedDB await; cached vocabulary, dialogue/reader clip routing; missing-audio guidance; mic permission cancellation and stale-stream cleanup; local audibility-check persistence; mobile filters; 80% independent recall; one-time rewards and privacy assertions. These tests use fake IndexedDB, Audio and MediaRecorder and cannot verify sound actually reaching an Android speaker. Existing phoneme tests are included in GitHub Actions.
+- **CI:** Both push and PR paths now trigger QA for `index.html`, `voice-studio.js`, the voice, family-word and phoneme regression tests. Workflow-only commit follows v4.6.
+- **Remaining:** Require user-device Record → Stop & Save → Play → `Yes, I heard it` / `Still silent`. Validate JSON voice-pack export/import on two real phones. Confirm pronunciation and disputed written forms with fluent CHamoru reviewer. Unverified CHamoru TTS and isolated phonics must not be counted toward language mastery. Avoid replacing this version or repeating completed work.
+
+
 ## 2026-10-26 | Family Voice Studio v4.5 and randomized Unit 2 recall
 
 - RELEASE: Public CHamorU GitHub Pages website returned title `CHamorU · Private Voice Studio v4.5`; separate `voice-studio.js` URL also responded. This verifies deployment of source assets, **not** physical microphone/audio playback.
