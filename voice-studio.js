@@ -60,11 +60,11 @@ function database(){
 async function stored(id){
  if(!phrase(id))return null;
  const db=await database();
- return new Promise((resolve,reject)=>{const q=db.transaction('clips').objectStore('clips').get(id);q.onsuccess=()=>resolve(q.result||null);q.onerror=()=>reject(q.error)});
+ return new Promise((resolve,reject)=>{const tx=db.transaction('clips'),q=tx.objectStore('clips').get(id);q.onsuccess=()=>resolve(q.result||null);q.onerror=()=>reject(q.error||Error('Read failed'));tx.onerror=()=>reject(tx.error||Error('Read failed'));tx.onabort=()=>reject(tx.error||Error('Read interrupted'))});
 }
 async function storedAll(){
  const db=await database();
- return new Promise((resolve,reject)=>{const q=db.transaction('clips').objectStore('clips').getAll();q.onsuccess=()=>resolve((q.result||[]).filter(a=>phrase(a.id)));q.onerror=()=>reject(q.error)});
+ return new Promise((resolve,reject)=>{const tx=db.transaction('clips'),q=tx.objectStore('clips').getAll();q.onsuccess=()=>resolve((q.result||[]).filter(a=>phrase(a.id)));q.onerror=()=>reject(q.error||Error('Read failed'));tx.onerror=()=>reject(tx.error||Error('Read failed'));tx.onabort=()=>reject(tx.error||Error('Read interrupted'))});
 }
 async function save(id,blob){
  if(!phrase(id)||!blob||!blob.size||blob.size>MAX)throw Error('Recording must be smaller than 3 MB');
