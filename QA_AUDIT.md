@@ -1,5 +1,17 @@
 # CHamorU QA Audit
 
+## 2026-10-27 02:44 ET | Atomic family voice-pack import and CI
+
+**CODE UPDATED + 45/45 AUTOMATED TESTS PASSED. Physical Android audio remains unverified.**
+
+- Inspected current main and the v4.6 family-voice regression history before editing. A genuine data-integrity risk remained: importing a pack saved each clip in its own IndexedDB transaction, so a storage/quota error midway could replace some recordings while leaving others unchanged.
+- `voice-studio.js` commit `e0d6363b4481` now validates/decodes each supported clip first and writes all valid clips in **one IndexedDB readwrite transaction**. Playback cache and local audibility confirmations change only after the transaction commits. Invalid clips continue to be skipped with an explicit count. Existing storage keys, voice-pack format, 14 phrase IDs, navigation, mastery, XP and rewards were preserved.
+- Two isolated V8 preflight cases passed: (1) both clips commit on success; (2) a synthetic second-clip quota failure preserves the original recording and leaves the other clip absent. These tests use mocked IndexedDB and audio, not real phone storage or playback.
+- Permanent simulated regression committed in `scripts/test_voice_studio.js` at `683e0b9000bd`; the initial CI run `40463035028` failed **one test-harness setup** because the new test omitted its fake `atob` decoder (44 passed, 1 failed). Test-only correction `6c2b02f21828` supplies that decoder. **Final GitHub Actions run [40463081279](https://github.com/clarenceandbridgettallen-ops/chamoru/actions/runs/40463081279) completed SUCCESS: 45 tests passed, 0 failed**.
+- GitHub Pages workflow for the final test-only commit was still running at this audit write; do not claim the newest deployment verified. No family recordings were exported, uploaded, played on real Android, or certified by a fluent speaker.
+- NEXT: Confirm Pages workflow and independently test real Android Record → Stop & Save → Play, then opt-in export/import on two phones. Review pronunciation and legacy spellings with a fluent CHamoru speaker before language-audio mastery claims.
+
+
 ## 2026-10-26 | Family Voices in Conversations v4.6
 
 **Outcome: CODE UPDATED + DEPLOYMENT VERIFIED + SIMULATED TESTS PASSED. Physical Android audio remains unverified.**
