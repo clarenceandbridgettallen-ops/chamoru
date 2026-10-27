@@ -9,7 +9,7 @@ const WORDS=[['hafa','Håfa adai!','Hello'],['thanks','Si Yu’os ma’åse’.'
  ['thanks-alt','Si Yu’us ma’åse’.','Thank you · existing dialogue variant, spelling pending fluent review'],
  ['welcome','Buen probechu.','You are welcome · dialogue, spelling pending fluent review']];
 const DB='chamoru-family-voice-v1',MAX=3*1024*1024;
-let dbPromise=null,rec=null,stream=null,parts=[],currentId=null,limitTimer=null,player=null,audioUrl=null,playSeq=0,micSeq=0,pendingMic=false,message='',audioTimer=null;
+let dbPromise=null,rec=null,stream=null,parts=[],currentId=null,limitTimer=null,player=null,audioUrl=null,playSeq=0,micSeq=0,pendingMic=false,savingId=null,message='',audioTimer=null;
 const clipCache=new Map(),cacheTouched=new Set();let cacheReady=false,cachePromise=null;
 const SOUND_CHECK_KEY='chamoru-device-audio-check-v1';
 let lastPlayedId=null,voiceFilter='starter';const soundChecks=(()=>{
@@ -94,6 +94,7 @@ async function saveImportedBatch(entries){
  });
 }
 async function erase(id){
+ if(savingId){status('Wait for the recording to finish saving before deleting audio.');return}
  if(!phrase(id))return;
  if(!global.confirm('Delete your saved recording of '+phrase(id)[1]+'?'))return;
  stopAudio();
@@ -170,7 +171,7 @@ function playLine(word,slow=false,target='audioStatus'){
 }
 function clearMic(){if(limitTimer){clearTimeout(limitTimer);limitTimer=null}if(stream){try{stream.getTracks().forEach(t=>t.stop())}catch(e){}stream=null}}
 async function start(id){
- if(!phrase(id)||currentId){status('Finish the current recording first.');return}
+ if(!phrase(id)||currentId||savingId){status(savingId?'Wait for the recording to finish saving before starting another.':'Finish the current recording first.');return}
  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||typeof MediaRecorder==='undefined'){status('Recording needs Chrome with microphone permission.');return}
  stopAudio();currentId=id;parts=[];pendingMic=true;const request=++micSeq;
  status('Waiting for microphone permission…');render();
@@ -185,12 +186,14 @@ async function start(id){
   rec.onerror=()=>{status('Microphone error. Try Chrome.');currentId=null;rec=null;clearMic();render()};
   rec.onstop=async()=>{
    const idToSave=currentId,type=rec&&rec.mimeType||mime||'audio/webm';
-   currentId=null;rec=null;clearMic();
+   savingId=idToSave;currentId=null;rec=null;clearMic();
    const blob=new Blob(parts,{type});parts=[];
-   if(!idToSave){status('Recording ended without saving.');render();return}
+   if(!idToSave){savingId=null;status('Recording ended without saving.');render();return}
+   status('Saving '+phrase(idToSave)[1]+' on this device…');render();
    try{await save(idToSave,blob);status('Saved '+phrase(idToSave)[1]+'. Tap Play to check it.')}
    catch(e){status('Recording not saved: '+e.message)}
-   render();
+   finally{savingId=null;render()}
+
   };
   rec.start(250);status('Recording '+phrase(id)[1]+'… tap Stop & Save when done.');render();
   limitTimer=setTimeout(()=>{if(rec&&rec.state==='recording'){status('20-second limit. Saving…');finish()}},20000);
@@ -200,6 +203,7 @@ function cancel(){if(!pendingMic)return;micSeq++;pendingMic=false;currentId=null
 function finish(){if(rec&&rec.state!=='inactive')try{rec.stop()}catch(e){status('Could not stop: '+e.message);currentId=null;clearMic()}}
 const asDataURL=blob=>new Promise((res,rej)=>{const reader=new FileReader();reader.onload=()=>res(reader.result);reader.onerror=()=>rej(Error('Cannot encode audio'));reader.readAsDataURL(blob)});
 async function exportAll(){
+ if(savingId){status('Saving your recording. Wait until it finishes before exporting voices.');return}
  if(currentId){status('Finish recording or cancel the microphone request before exporting voices.');return}
  try{status('Preparing voice pack…');const clips=await storedAll();if(!clips.length){status('Record at least one word before exporting.');return}
   const data=[];for(const clip of clips)data.push({id:clip.id,data:await asDataURL(clip.blob)});
@@ -211,6 +215,7 @@ async function exportAll(){
  }catch(e){status('Export error: '+e.message)}
 }
 async function importAll(input){
+ if(savingId){status('Saving your recording. Wait until it finishes before importing voices.');if(input)input.value='';return}
  if(currentId){status('Finish recording or cancel the microphone request before importing voices.');if(input)input.value='';return}
  const file=input.files&&input.files[0];if(!file)return;
  try{
@@ -244,20 +249,22 @@ async function render(){
  let have=new Set();try{have=new Set((await storedAll()).map(x=>x.id))}catch(e){status('Local storage unavailable: '+e.message)}
  root.innerHTML=(voiceFilter==='starter'?WORDS.slice(0,8):WORDS.slice(8)).map(w=>{
   const on=currentId===w[0],saved=have.has(w[0]),heard=soundChecks[w[0]];
-  return '<article class="chvoice-item"><div><strong>'+escapeHTML(w[1])+'</strong><div class="small muted">'+escapeHTML(w[2])+' · '+(saved?'Saved on this phone':'No recording yet')+(heard?' · Your playback check: '+(heard.heard?'Heard':'Silent'):'')+'</div></div><div class="chvoice-actions">'+
-    (on?(pendingMic?'<button class="secondary" onclick="CHVoice.cancel()">Cancel microphone request</button>':'<button class="primary" onclick="CHVoice.finish()">■ Stop & Save</button>'):'<button class="secondary" onclick="CHVoice.start(\''+w[0]+'\')" '+(currentId?'disabled':'')+'>● Record</button>')+
-    '<button class="secondary" onclick="CHVoice.replay(\''+w[0]+'\')" '+(!saved||currentId?'disabled':'')+'>▶ Play</button>'+
-    '<button class="secondary" onclick="CHVoice.erase(\''+w[0]+'\')" '+(!saved||currentId?'disabled':'')+'>Delete</button></div></article>';
+  return '<article class="chvoice-item"><div><strong>'+escapeHTML(w[1])+'</strong><div class="small muted">'+escapeHTML(w[2])+' · '+(savingId===w[0]?'Saving on this phone…':saved?'Saved on this phone':'No recording yet')+(heard?' · Your playback check: '+(heard.heard?'Heard':'Silent'):'')+'</div></div><div class="chvoice-actions">'+
+    (on?(pendingMic?'<button class="secondary" onclick="CHVoice.cancel()">Cancel microphone request</button>':'<button class="primary" onclick="CHVoice.finish()">■ Stop & Save</button>'):'<button class="secondary" onclick="CHVoice.start(\''+w[0]+'\')" '+((currentId||savingId)?'disabled':'')+'>● Record</button>')+
+    '<button class="secondary" onclick="CHVoice.replay(\''+w[0]+'\')" '+(!saved||currentId||savingId?'disabled':'')+'>▶ Play</button>'+
+    '<button class="secondary" onclick="CHVoice.erase(\''+w[0]+'\')" '+(!saved||currentId||savingId?'disabled':'')+'>Delete</button></div></article>';
  }).join('');
  status(message||'Tap Record, speak, then Stop & Save. Play it back to check.');
 }
 function filter(group){
+ if(savingId){status('Wait until your recording finishes saving.');return}
  if(currentId){status('Finish the current recording first.');return}
  if(group!=='starter'&&group!=='dialogue')return;
  voiceFilter=group;lastPlayedId=null;const check=document.getElementById('voicePlaybackCheck');if(check)check.hidden=true;
  render();
 }
 function open(){
+ if(savingId){status('Wait until your recording finishes saving.');return}
  if(currentId){status('Finish recording before leaving.');return}
  stopAudio();if(typeof stop==='function')stop();screen='voiceStudio';
  APP.innerHTML=guideNav('practice')+'<section class="panel chvoice-panel"><div class="sectionLabel">CHAMORU FAMILY VOICE STUDIO</div><h2>🎙️ Record our language</h2>'+
@@ -275,10 +282,10 @@ function open(){
 
 // Don't leave the microphone open while moving to another learning screen.
 if(document.addEventListener)document.addEventListener('click',function(ev){
- if(!currentId)return;
+ if(!currentId&&!savingId)return;
  const target=ev.target;
  if(target&&target.closest&&target.closest('.guide-nav, .stickybar')){
-  ev.preventDefault();ev.stopImmediatePropagation();status('Tap Stop & Save before leaving this screen.');
+  ev.preventDefault();ev.stopImmediatePropagation();status(savingId?'Wait until your recording finishes saving before leaving.':'Tap Stop & Save before leaving this screen.');
  }
 },true);
 if(global.addEventListener)global.addEventListener('pagehide',function(){
