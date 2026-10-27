@@ -353,3 +353,46 @@ test('Stop & Save holds the voice transfer and new-recording gates until storage
  assert.match(h.nodes.get('voiceStudioStatus').textContent,/Saved Håfa adai/);
  assert.doesNotMatch(h.nodes.get('voiceStudioList').innerHTML,/Saving on this phone/);
 });
+
+// A voice-pack read/encode is asynchronous. The capture and transfer guards
+// must remain held for the ENTIRE operation, not merely its first synchronous tick.
+test('in-flight voice-pack import serializes recording and other transfers',async()=>{
+ const h=harness();h.c.atob=s=>Buffer.from(s,'base64').toString('binary');
+ h.c.voiceStudio();await h.tick();
+ let releaseRead;
+ const payload=Buffer.from('q'.repeat(128)).toString('base64');
+ const pack=JSON.stringify({format:'CHamorU-voicepack-v1',clips:[{id:'hafa',data:'data:audio/webm;base64,'+payload}]});
+ const input={files:[{size:pack.length,text:()=>new Promise(resolve=>{releaseRead=resolve})}],value:'selected'};
+ const job=h.c.CHVoice.importAll(input);await h.tick();
+ assert.equal(typeof releaseRead,'function','Import must be waiting for file data');
+ await h.c.CHVoice.start('mother');
+ assert.match(h.nodes.get('voiceStudioStatus').textContent,/voice-pack transfer finishes before recording/);
+ await h.c.CHVoice.exportAll();
+ assert.match(h.nodes.get('voiceStudioStatus').textContent,/current voice-pack transfer finishes/);
+ assert.equal(h.records.size,0,'Import has not committed while file read is pending');
+ releaseRead(pack);await job;await h.tick();
+ assert.equal(h.records.has('hafa'),true);
+ assert.equal(input.value,'');
+ await h.c.CHVoice.start('mother');h.c.CHVoice.finish();await h.tick();
+ assert.equal(h.records.has('mother'),true,'Recording allowed after import completes');
+});
+
+test('in-flight voice-pack export blocks capture and deletion until encoding finishes',async()=>{
+ const h=harness();h.c.voiceStudio();await h.tick();
+ await h.c.CHVoice.save('hafa',new Blob(['z'.repeat(128)],{type:'audio/webm'}));
+ let finishEncoding;
+ h.c.FileReader=class {
+   readAsDataURL(){finishEncoding=()=>{this.result='data:audio/webm;base64,'+Buffer.from('z'.repeat(128)).toString('base64');this.onload?.()}}
+ };
+ const exportJob=h.c.CHVoice.exportAll();await h.tick();
+ assert.equal(typeof finishEncoding,'function','Export must be waiting for encoding');
+ await h.c.CHVoice.start('mother');
+ assert.match(h.nodes.get('voiceStudioStatus').textContent,/voice-pack transfer finishes before recording/);
+ await h.c.CHVoice.erase('hafa');
+ assert.match(h.nodes.get('voiceStudioStatus').textContent,/voice-pack transfer finishes before deleting/);
+ assert.equal(h.records.has('hafa'),true);
+ finishEncoding();await exportJob;await h.tick();
+ assert.match(h.nodes.get('voiceStudioStatus').textContent,/Voice pack download started/);
+ await h.c.CHVoice.start('mother');h.c.CHVoice.finish();await h.tick();
+ assert.equal(h.records.has('mother'),true,'Capture allowed after export completes');
+});
