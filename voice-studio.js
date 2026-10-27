@@ -196,6 +196,10 @@ async function importAll(input){
   if(file.size>60*1024*1024)throw Error('File exceeds 60 MB');
   const pack=JSON.parse(await file.text());
   if(pack.format!=='CHamorU-voicepack-v1'||!Array.isArray(pack.clips)||pack.clips.length>WORDS.length)throw Error('Wrong voice-pack format');
+  // Reject duplicate valid phrase IDs before writing anything. A later entry
+  // must not silently overwrite an earlier recording from the same pack.
+  const ids=pack.clips.filter(entry=>entry&&phrase(entry.id)).map(entry=>entry.id);
+  if(new Set(ids).size!==ids.length)throw Error('Voice pack repeats a phrase. No recordings were changed.');
   if(!confirm('Import '+pack.clips.length+' voice recordings? Existing matching words will be replaced.'))return;
   let count=0,skipped=0;
   for(const entry of pack.clips){
