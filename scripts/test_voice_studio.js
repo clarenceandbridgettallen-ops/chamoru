@@ -307,3 +307,20 @@ test('failed multi-clip import does not partially overwrite existing family reco
  assert.match(h.nodes.get('voiceStudioStatus').textContent,/Import error: Synthetic storage quota failure/);
  assert.equal(input.value,'');
 });
+
+
+test('voice pack import and export wait until microphone recording or permission request ends',async()=>{
+ const pending=[];const h=harness({getUserMedia:()=>new Promise(resolve=>pending.push(resolve))});
+ h.c.voiceStudio();await h.tick();
+ const permission=h.c.CHVoice.start('hafa');await h.tick();
+ await h.c.CHVoice.exportAll();
+ assert.match(h.nodes.get('voiceStudioStatus').textContent,/Finish recording or cancel the microphone request before exporting/);
+ let fileRead=false;
+ const input={files:[{size:12,text:async()=>{fileRead=true;return '{}'}}],value:'selected'};
+ await h.c.CHVoice.importAll(input);
+ assert.match(h.nodes.get('voiceStudioStatus').textContent,/Finish recording or cancel the microphone request before importing/);
+ assert.equal(fileRead,false,'Private import must not begin during microphone capture');
+ assert.equal(input.value,'','Blocked file selection must be cleared');
+ assert.equal(h.records.size,0);
+ h.c.CHVoice.cancel();pending[0]({getTracks:()=>[{stop(){}}]});await permission;await h.tick();
+});
