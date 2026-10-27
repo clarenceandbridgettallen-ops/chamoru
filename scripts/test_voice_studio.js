@@ -17,7 +17,7 @@ test('app integrates recording studio and routes vocabulary through family voice
   assert.doesNotMatch(source,/\bfetch\s*\(|XMLHttpRequest|sendBeacon/);
 });
 function harness(settings={}){
-  const records=new Map(),played=[],status=[],audio=[],timeouts=[],nodes=new Map();
+  const records=new Map(),played=[],status=[],audio=[],timeouts=[],nodes=new Map(),deviceStorage=new Map();
   const elem=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',textContent:'',id});return nodes.get(id)};
   const db={
     objectStoreNames:{contains:()=>true},
@@ -49,6 +49,7 @@ function harness(settings={}){
   const getUserMedia=settings.getUserMedia|| (async()=>({getTracks:()=>[{stop:()=>tracksStopped++}]}));
   const c={console,Blob,Uint8Array,Promise,setTimeout,clearTimeout,
     indexedDB,MediaRecorder:Recorder,Audio,
+    localStorage:{getItem:k=>deviceStorage.get(k)||null,setItem:(k,v)=>deviceStorage.set(k,v)},
     navigator:{mediaDevices:settings.noMic?null:{getUserMedia}},
     URL:{createObjectURL:()=> 'blob:testing-'+audio.length,revokeObjectURL(){}},
     document:{getElementById:elem,body:{appendChild(){}},createElement:()=>({click(){},remove(){}})},
@@ -60,7 +61,7 @@ function harness(settings={}){
   };
   c.window=c;c.global=c;vm.createContext(c);vm.runInContext(source,c);
   const tick=async()=>{for(let i=0;i<15;i++)await Promise.resolve()};
-  return {c,records,played,status,nodes,tick,tracksStopped:()=>tracksStopped};
+  return {c,records,played,status,nodes,tick,deviceStorage,tracksStopped:()=>tracksStopped};
 }
 test('studio opens with lesson and conversation phrases, visible Next and no network actions',async()=>{
   const h=harness();h.c.voiceStudio();await h.tick();
@@ -68,6 +69,8 @@ test('studio opens with lesson and conversation phrases, visible Next and no net
   assert.match(h.c.APP.innerHTML,/NEXT: Continue learning/);
   assert.match(h.nodes.get('voiceStudioList').innerHTML,/Nåna/);
   assert.match(h.nodes.get('voiceStudioList').innerHTML,/Håfa adai!/);
+  assert.match(h.c.APP.innerHTML,/Conversations \(6\)/);
+  h.c.CHVoice.filter('dialogue');await h.tick();
   assert.match(h.nodes.get('voiceStudioList').innerHTML,/Kao siña un ayuda yo/);
 });
 test('no family recording never triggers known-silent browser TTS',async()=>{
@@ -144,4 +147,25 @@ test('pending microphone can cancel and stale same-word permission cannot start 
   h.c.CHVoice.finish();await h.tick();
   assert.equal(stopped,3);
   assert.ok(h.records.has('mother'));
+});
+
+test('audibility confirmation is saved only locally, not counted as pronunciation mastery',async()=>{
+ const h=harness();await h.tick();h.c.voiceStudio();await h.tick();
+ await h.c.CHVoice.save('hafa',new Blob(['a'.repeat(128)],{type:'audio/webm'}));
+ h.c.CHVoice.replay('hafa');await h.tick();
+ h.c.CHVoice.confirmSound(true);await h.tick();
+ assert.match(h.nodes.get('voiceStudioStatus').textContent,/not CHamoru pronunciation/);
+ const record=JSON.parse(h.deviceStorage.get('chamoru-device-audio-check-v1'));
+ assert.equal(record.hafa.heard,true);
+ assert.match(h.nodes.get('voiceStudioList').innerHTML,/Your playback check: Heard/);
+ assert.equal(h.c.APP.innerHTML.includes('pronunciation mastered'),false);
+});
+test('recording groups keep 8 starter cards and 6 conversation prompts apart',async()=>{
+ const h=harness();await h.tick();h.c.voiceStudio();await h.tick();
+ assert.doesNotMatch(h.nodes.get('voiceStudioList').innerHTML,/Mamaolek ha/);
+ h.c.CHVoice.filter('dialogue');await h.tick();
+ assert.match(h.nodes.get('voiceStudioList').innerHTML,/Mamaolek ha/);
+ assert.doesNotMatch(h.nodes.get('voiceStudioList').innerHTML,/Nåna/);
+ h.c.CHVoice.filter('starter');await h.tick();
+ assert.match(h.nodes.get('voiceStudioList').innerHTML,/Nåna/);
 });
