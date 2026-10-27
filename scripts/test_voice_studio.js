@@ -189,3 +189,29 @@ test('re-recording or deleting a clip clears only its stale playback confirmatio
  assert.equal(checks.hafa,undefined,'Deleted clip must not retain heard result');
  assert.equal(checks.yes.heard,true);
 });
+
+
+test('voice packs with MediaRecorder codec MIME types import without silently losing clips',async()=>{
+  // Simulated cross-device transfer. Real Android export/import and playback
+  // still require testing on two phones with consenting family speakers.
+  const h=harness();h.c.atob=s=>Buffer.from(s,'base64').toString('binary');
+  h.c.voiceStudio();await h.tick();
+  const payload=Buffer.from('a'.repeat(128)).toString('base64');
+  const pack=JSON.stringify({format:'CHamorU-voicepack-v1',clips:[
+    {id:'hafa',data:'data:audio/webm;codecs=opus;base64,'+payload},
+    {id:'yes',data:'data:audio/mp4;codecs=mp4a.40.2;base64,'+payload},
+    {id:'mother',data:'data:audio/webm;base64,'+payload},
+    {id:'no',data:'data:text/html;base64,'+payload},
+    {id:'father',data:'data:audio/webm;evil=unsafe;base64,'+payload}
+  ]});
+  const input={files:[{size:pack.length,text:async()=>pack}],value:'selected'};
+  await h.c.CHVoice.importAll(input);await h.tick();
+  assert.equal(h.records.size,3,'Codec-parameter and legacy clips import; unsafe MIME entries do not');
+  assert.equal(h.records.get('hafa').blob.type,'audio/webm;codecs=opus');
+  assert.equal(h.records.get('yes').blob.type,'audio/mp4;codecs=mp4a.40.2');
+  assert.equal(h.records.get('mother').blob.type,'audio/webm');
+  assert.match(h.nodes.get('voiceStudioStatus').textContent,/Imported 3 audio recording/);
+  assert.equal(input.value,'');
+  h.c.CHVoice.replay('hafa');await h.tick();
+  assert.equal(h.played.length,1,'Imported cached voice starts simulated playback');
+});
