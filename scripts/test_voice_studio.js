@@ -169,3 +169,23 @@ test('recording groups keep 8 starter cards and 6 conversation prompts apart',as
  h.c.CHVoice.filter('starter');await h.tick();
  assert.match(h.nodes.get('voiceStudioList').innerHTML,/Nåna/);
 });
+
+test('re-recording or deleting a clip clears only its stale playback confirmation',async()=>{
+ const h=harness();h.c.voiceStudio();await h.tick();
+ const blob=letter=>new Blob([letter.repeat(128)],{type:'audio/webm'});
+ await h.c.CHVoice.save('hafa',blob('a'));
+ await h.c.CHVoice.save('yes',blob('y'));
+ h.c.CHVoice.replay('hafa');h.c.CHVoice.confirmSound(true);await h.tick();
+ h.c.CHVoice.replay('yes');h.c.CHVoice.confirmSound(true);await h.tick();
+ assert.equal(JSON.parse(h.deviceStorage.get('chamoru-device-audio-check-v1')).hafa.heard,true);
+ await h.c.CHVoice.save('hafa',blob('b'));await h.tick();
+ let checks=JSON.parse(h.deviceStorage.get('chamoru-device-audio-check-v1'));
+ assert.equal(checks.hafa,undefined,'Replacement clip must not inherit old heard result');
+ assert.equal(checks.yes.heard,true,'Other clip checks are preserved');
+ assert.doesNotMatch(h.nodes.get('voiceStudioList').innerHTML,/Håfa adai![\\s\\S]{0,160}Your playback check: Heard/);
+ h.c.CHVoice.replay('hafa');h.c.CHVoice.confirmSound(true);await h.tick();
+ await h.c.CHVoice.erase('hafa');await h.tick();
+ checks=JSON.parse(h.deviceStorage.get('chamoru-device-audio-check-v1'));
+ assert.equal(checks.hafa,undefined,'Deleted clip must not retain heard result');
+ assert.equal(checks.yes.heard,true);
+});
