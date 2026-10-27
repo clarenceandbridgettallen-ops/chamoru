@@ -32,6 +32,18 @@ function offerPlaybackCheck(id){
  if(word)word.textContent=phrase(id)?.[1]||'this phrase';
  if(check)check.hidden=false;
 }
+function invalidateSoundCheck(id){
+ // A new, imported, or deleted recording must not inherit an older clip's audibility result.
+ if(Object.prototype.hasOwnProperty.call(soundChecks,id)){
+  delete soundChecks[id];
+  try{localStorage.setItem(SOUND_CHECK_KEY,JSON.stringify(soundChecks))}catch(e){}
+ }
+ if(lastPlayedId===id){
+  lastPlayedId=null;
+  const check=document.getElementById('voicePlaybackCheck');
+  if(check)check.hidden=true;
+ }
+}
 function phrase(id){return WORDS.find(w=>w[0]===id)}
 function status(s){message=s;const el=document.getElementById('voiceStudioStatus');if(el)el.textContent=s}
 function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -59,14 +71,14 @@ async function save(id,blob){
  const db=await database();return new Promise((resolve,reject)=>{
   const tx=db.transaction('clips','readwrite');
   tx.objectStore('clips').put({id,blob,mime:blob.type||'audio/webm',savedAt:new Date().toISOString()});
-  tx.oncomplete=()=>{clipCache.set(id,blob);resolve()};tx.onerror=()=>reject(tx.error||Error('Storage failed'));tx.onabort=()=>reject(tx.error||Error('Save interrupted'));
+  tx.oncomplete=()=>{clipCache.set(id,blob);invalidateSoundCheck(id);resolve()};tx.onerror=()=>reject(tx.error||Error('Storage failed'));tx.onabort=()=>reject(tx.error||Error('Save interrupted'));
  });
 }
 async function erase(id){
  if(!phrase(id))return;
  if(!global.confirm('Delete your saved recording of '+phrase(id)[1]+'?'))return;
  stopAudio();
- try{const db=await database();await new Promise((res,rej)=>{const tx=db.transaction('clips','readwrite');tx.objectStore('clips').delete(id);tx.oncomplete=()=>{clipCache.delete(id);res()};tx.onerror=()=>rej(tx.error)});status('Recording deleted.');await render()}
+ try{const db=await database();await new Promise((res,rej)=>{const tx=db.transaction('clips','readwrite');tx.objectStore('clips').delete(id);tx.oncomplete=()=>{clipCache.delete(id);invalidateSoundCheck(id);res()};tx.onerror=()=>rej(tx.error)});status('Recording deleted.');await render()}
  catch(e){status('Delete failed: '+e.message)}
 }
 
