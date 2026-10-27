@@ -217,3 +217,13 @@
 - **NEXT:** Verify Pages completion and authorized Android record/save/play test, then native-speaker review; preserve existing learning data and never infer audible success from simulated tests.
 
 - **FOLLOW-UP PRESERVATION FIX:** `voice-studio.js` commit `331a3edfebf325e95db31f45c3a8bfefea42e73d` retains the prior best-effort Stop & Save on page exit when a recorder is already active, while invalidating only a pending microphone-permission request. JavaScript parsed successfully; final CI for this follow-up was pending at write. A page-exit save is never guaranteed by browsers, so users should explicitly tap Stop & Save before leaving.
+
+
+## 2026-10-26 evening | MediaRecorder voice-pack codec import repair
+
+- **INSPECTED:** HEAD b9634cc before this fix, existing v4.6 Family Voice Studio `voice-studio.js`, `scripts/test_voice_studio.js`, QA log, and the current public JS asset. Existing voice library, consent rules, progress keys and lesson routes were preserved.
+- **VERIFIED DEFECT (SOURCE):** Recorder prefers `audio/webm;codecs=opus` and saves a Blob with that MIME. JSON export uses FileReader's data URL, but import previously accepted only `data:audio/webm;base64,...` without `codecs`. Thus a legitimate exported clip with a codec-qualified MIME could be silently skipped on a second device.
+- **CODE UPDATED:** `voice-studio.js` commit `b561cfdc598f816bee6984b63df58ea27519d086` accepts allowlisted audio MIME types with optional constrained codec parameters, preserves codec metadata, and continues rejecting unrelated MIME parameters. `scripts/test_voice_studio.js` commit `c783af875f601d4d53c497d3c493f1b2c0c65405` adds a synthetic import test for WebM/Opus, MP4/AAC, legacy WebM, and rejected unsafe MIME values.
+- **TESTED:** 6/6 precommit codec-MIME parsing cases passed in isolated V8. GitHub Actions learner-flow/audio QA run [40434197309](https://github.com/clarenceandbridgettallen-ops/chamoru/actions/runs/40434197309) completed SUCCESS on `c783af8`, including the new Node regression. GitHub Pages run [40434197139](https://github.com/clarenceandbridgettallen-ops/chamoru/actions/runs/40434197139) was still IN PROGRESS when checked; do not infer the new version is publicly deployed yet.
+- **NOT VERIFIED:** Actual Android microphone or speaker, a real two-device export/import, decoded playback of imported clips, pronunciation accuracy, or a full real-browser learner journey. No family audio was uploaded or used in tests. Fluent CHamoru review remains mandatory.
+- **NEXT:** Confirm Pages success, then consenting Android-to-Android Record → Stop & Save → Play → Export → Import → Play and honest heard/silent feedback. Never equate technical playback with spoken mastery.
