@@ -11,6 +11,9 @@ on:
   pull_request:
     paths:
       - index.html
+      - voice-studio.js
+      - scripts/test_voice_studio.js
+      - scripts/test_family_words.js
       - scripts/test_phoneme_audio.js
       - .github/workflows/audio-qa.yml
 permissions:
