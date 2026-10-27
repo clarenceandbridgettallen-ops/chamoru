@@ -74,6 +74,25 @@ async function save(id,blob){
   tx.oncomplete=()=>{cacheTouched.add(id);clipCache.set(id,blob);invalidateSoundCheck(id);resolve()};tx.onerror=()=>reject(tx.error||Error('Storage failed'));tx.onabort=()=>reject(tx.error||Error('Save interrupted'));
  });
 }
+// All valid clips share one IndexedDB transaction, so a quota/storage error
+// cannot leave an imported voice pack half-applied or erase prior sound checks.
+async function saveImportedBatch(entries){
+ if(!entries.length)return;
+ const db=await database();
+ return new Promise((resolve,reject)=>{
+  const tx=db.transaction('clips','readwrite'),store=tx.objectStore('clips');
+  try{
+   const savedAt=new Date().toISOString();
+   for(const {id,blob} of entries)store.put({id,blob,mime:blob.type||'audio/webm',savedAt});
+  }catch(e){try{tx.abort()}catch(_){}reject(e);return}
+  tx.oncomplete=()=>{
+   for(const {id,blob} of entries){cacheTouched.add(id);clipCache.set(id,blob);invalidateSoundCheck(id)}
+   resolve();
+  };
+  tx.onerror=()=>reject(tx.error||Error('Import storage failed'));
+  tx.onabort=()=>reject(tx.error||Error('Import cancelled'));
+ });
+}
 async function erase(id){
  if(!phrase(id))return;
  if(!global.confirm('Delete your saved recording of '+phrase(id)[1]+'?'))return;
@@ -201,7 +220,7 @@ async function importAll(input){
   const ids=pack.clips.filter(entry=>entry&&phrase(entry.id)).map(entry=>entry.id);
   if(new Set(ids).size!==ids.length)throw Error('Voice pack repeats a phrase. No recordings were changed.');
   if(!confirm('Import '+pack.clips.length+' voice recordings? Existing matching words will be replaced.'))return;
-  let count=0,skipped=0;
+  let skipped=0;const prepared=[];
   for(const entry of pack.clips){
    if(!entry||!phrase(entry.id)||typeof entry.data!=='string'||entry.data.length>MAX*1.5){skipped++;continue}
    const match=entry.data.match(/^data:(audio\/(?:webm|mp4|ogg|wav|mpeg))(?:;codecs=([A-Za-z0-9._-]+(?:,[A-Za-z0-9._-]+)*))?;base64,([A-Za-z0-9+/=]+)$/i);
@@ -210,9 +229,10 @@ async function importAll(input){
    let raw;try{raw=atob(match[3])}catch(e){skipped++;continue}
    if(raw.length<64||raw.length>MAX){skipped++;continue}
    const bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
-   await save(entry.id,new Blob([bytes],{type:match[1]+(match[2]?';codecs='+match[2]:'')}));count++;
+   prepared.push({id:entry.id,blob:new Blob([bytes],{type:match[1]+(match[2]?';codecs='+match[2]:'')})});
   }
-  status('Imported '+count+' audio recording(s) to this device.'+(skipped?' '+skipped+' invalid or unsupported clip(s) skipped.':'')+' Check playback on this device.');await render();
+  await saveImportedBatch(prepared);
+  status('Imported '+prepared.length+' audio recording(s) to this device.'+(skipped?' '+skipped+' invalid or unsupported clip(s) skipped.':'')+' Check playback on this device.');await render();
  }catch(e){status('Import error: '+e.message)}finally{input.value=''}
 }
 async function render(){
