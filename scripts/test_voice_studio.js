@@ -215,3 +215,23 @@ test('voice packs with MediaRecorder codec MIME types import without silently lo
   h.c.CHVoice.replay('hafa');await h.tick();
   assert.equal(h.played.length,1,'Imported cached voice starts simulated playback');
 });
+
+
+test('corrupt voice-pack clip is skipped without blocking later valid recordings',async()=>{
+ const h=harness();h.c.voiceStudio();await h.tick();
+ const payload=Buffer.from('v'.repeat(128)).toString('base64');
+ h.c.atob=s=>{if(s==='AB')throw Error('Invalid base64');return Buffer.from(s,'base64').toString('binary')};
+ const pack=JSON.stringify({format:'CHamorU-voicepack-v1',clips:[
+  {id:'hafa',data:'data:audio/webm;base64,AB'},
+  {id:'yes',data:'data:audio/webm;codecs=opus;base64,'+payload}
+ ]});
+ const input={files:[{size:pack.length,text:async()=>pack}],value:'selected'};
+ await h.c.CHVoice.importAll(input);await h.tick();
+ assert.equal(h.records.size,1);
+ assert.equal(h.records.has('hafa'),false);
+ assert.equal(h.records.get('yes').blob.type,'audio/webm;codecs=opus');
+ assert.match(h.nodes.get('voiceStudioStatus').textContent,/Imported 1 audio recording/);
+ assert.match(h.nodes.get('voiceStudioStatus').textContent,/1 invalid or unsupported clip/);
+ assert.match(h.nodes.get('voiceStudioStatus').textContent,/Check playback on this device/);
+ assert.equal(input.value,'');
+});
