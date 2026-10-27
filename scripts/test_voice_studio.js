@@ -26,13 +26,18 @@ function harness(settings={}){
       // Stage writes until transaction completion, as real IndexedDB does.
       // An aborted multi-clip import must preserve every original recording.
       const pending=[],deletions=[],tx={};let settled=false;
-      const complete=()=>queueMicrotask(()=>{
-        if(settled)return;
-        settled=true;
-        for(const id of deletions)records.delete(id);
-        for(const value of pending)records.set(value.id,value);
-        tx.oncomplete?.();
-      });
+      const complete=()=>{
+        const settle=()=>queueMicrotask(()=>{
+          if(settled)return;
+          settled=true;
+          for(const id of deletions)records.delete(id);
+          for(const value of pending)records.set(value.id,value);
+          tx.oncomplete?.();
+        });
+        if(settings.deferWriteCompletion&&pending.length&&!settings.releaseWriteCommit){
+          settings.releaseWriteCommit=settle;
+        }else settle();
+      };
       tx.abort=()=>{if(settled)return;settled=true;queueMicrotask(()=>tx.onabort?.())};
       tx.objectStore=()=>({
         get(id){const q={};queueMicrotask(()=>{q.result=records.get(id);q.onsuccess?.()});return q},
@@ -323,4 +328,28 @@ test('voice pack import and export wait until microphone recording or permission
  assert.equal(input.value,'','Blocked file selection must be cleared');
  assert.equal(h.records.size,0);
  h.c.CHVoice.cancel();pending[0]({getTracks:()=>[{stop(){}}]});await permission;await h.tick();
+});
+
+test('Stop & Save holds the voice transfer and new-recording gates until storage commits',async()=>{
+ const settings={deferWriteCompletion:true};
+ const h=harness(settings);h.c.voiceStudio();await h.tick();
+ await h.c.CHVoice.start('hafa');await h.tick();
+ h.c.CHVoice.finish();await h.tick();
+ assert.equal(typeof settings.releaseWriteCommit,'function','Synthetic save must still be pending');
+ assert.match(h.nodes.get('voiceStudioList').innerHTML,/Saving on this phone/);
+ assert.match(h.nodes.get('voiceStudioList').innerHTML,/disabled/);
+ await h.c.CHVoice.exportAll();
+ assert.match(h.nodes.get('voiceStudioStatus').textContent,/Saving your recording.*before exporting/);
+ let read=false;
+ const input={files:[{size:2,text:async()=>{read=true;return '{}'}}],value:'selected'};
+ await h.c.CHVoice.importAll(input);
+ assert.equal(read,false,'Import must not read family files before the prior save commits');
+ assert.equal(input.value,'');
+ await h.c.CHVoice.start('yes');
+ assert.match(h.nodes.get('voiceStudioStatus').textContent,/finish saving before starting another/);
+ assert.equal(h.records.has('hafa'),false,'Storage commit is deliberately still pending');
+ settings.releaseWriteCommit();await h.tick();
+ assert.equal(h.records.has('hafa'),true,'Saved recording should be present after commit');
+ assert.match(h.nodes.get('voiceStudioStatus').textContent,/Saved Håfa adai/);
+ assert.doesNotMatch(h.nodes.get('voiceStudioList').innerHTML,/Saving on this phone/);
 });
