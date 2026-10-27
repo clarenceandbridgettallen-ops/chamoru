@@ -23,12 +23,22 @@ function harness(settings={}){
     objectStoreNames:{contains:()=>true},
     createObjectStore(){},
     transaction(){
-      const tx={};
+      // Stage writes until transaction completion, as real IndexedDB does.
+      // An aborted multi-clip import must preserve every original recording.
+      const pending=[],deletions=[],tx={};let settled=false;
+      const complete=()=>queueMicrotask(()=>{
+        if(settled)return;
+        settled=true;
+        for(const id of deletions)records.delete(id);
+        for(const value of pending)records.set(value.id,value);
+        tx.oncomplete?.();
+      });
+      tx.abort=()=>{if(settled)return;settled=true;queueMicrotask(()=>tx.onabort?.())};
       tx.objectStore=()=>({
         get(id){const q={};queueMicrotask(()=>{q.result=records.get(id);q.onsuccess?.()});return q},
         getAll(){const q={},snapshot=[...records.values()];if(settings.deferFirstGetAll&&!settings._deferredGetAll){settings._deferredGetAll=()=>{q.result=snapshot;q.onsuccess?.()}}else queueMicrotask(()=>{q.result=snapshot;q.onsuccess?.()});return q},
-        put(value){records.set(value.id,value);queueMicrotask(()=>tx.oncomplete?.())},
-        delete(id){records.delete(id);queueMicrotask(()=>tx.oncomplete?.())}
+        put(value){if(value.id===settings.failPutOnId)throw Error('Synthetic storage quota failure');pending.push(value);complete()},
+        delete(id){deletions.push(id);complete()}
       });
       return tx;
     }
@@ -277,4 +287,22 @@ test('late voice-cache warmup preserves replacement and deletion',async()=>{
    assert.equal(createdBlobs.length,0);
   }
  }
+});
+
+test('failed multi-clip import does not partially overwrite existing family recordings',async()=>{
+ const h=harness({failPutOnId:'yes'});h.c.voiceStudio();await h.tick();
+ const original=new Blob(['original'.repeat(30)],{type:'audio/webm'});
+ await h.c.CHVoice.save('hafa',original);
+ const payload=Buffer.from('replacement'.repeat(20)).toString('base64');
+ const pack=JSON.stringify({format:'CHamorU-voicepack-v1',clips:[
+  {id:'hafa',data:'data:audio/webm;base64,'+payload},
+  {id:'yes',data:'data:audio/webm;base64,'+payload}
+ ]});
+ const input={files:[{size:pack.length,text:async()=>pack}],value:'selected'};
+ await h.c.CHVoice.importAll(input);await h.tick();
+ assert.equal(h.records.size,1,'No partial import after a storage error');
+ assert.equal(h.records.get('hafa').blob,original,'Original recording must survive failed import');
+ assert.equal(h.records.has('yes'),false);
+ assert.match(h.nodes.get('voiceStudioStatus').textContent,/Import error: Synthetic storage quota failure/);
+ assert.equal(input.value,'');
 });
