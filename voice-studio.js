@@ -9,7 +9,7 @@ const WORDS=[['hafa','Håfa adai!','Hello'],['thanks','Si Yu’os ma’åse’.'
  ['thanks-alt','Si Yu’us ma’åse’.','Thank you · existing dialogue variant, spelling pending fluent review'],
  ['welcome','Buen probechu.','You are welcome · dialogue, spelling pending fluent review']];
 const DB='chamoru-family-voice-v1',MAX=3*1024*1024;
-let dbPromise=null,rec=null,stream=null,parts=[],currentId=null,limitTimer=null,player=null,audioUrl=null,playSeq=0,micSeq=0,pendingMic=false,savingId=null,message='',audioTimer=null;
+let dbPromise=null,rec=null,stream=null,parts=[],currentId=null,limitTimer=null,player=null,audioUrl=null,playSeq=0,micSeq=0,pendingMic=false,savingId=null,transferBusy=false,message='',audioTimer=null;
 const clipCache=new Map(),cacheTouched=new Set();let cacheReady=false,cachePromise=null;
 const SOUND_CHECK_KEY='chamoru-device-audio-check-v1';
 let lastPlayedId=null,voiceFilter='starter';const soundChecks=(()=>{
@@ -94,7 +94,7 @@ async function saveImportedBatch(entries){
  });
 }
 async function erase(id){
- if(savingId){status('Wait for the recording to finish saving before deleting audio.');return}
+ if(savingId||transferBusy){status(transferBusy?'Wait until the voice-pack transfer finishes before deleting audio.':'Wait for the recording to finish saving before deleting audio.');return}
  if(!phrase(id))return;
  if(!global.confirm('Delete your saved recording of '+phrase(id)[1]+'?'))return;
  stopAudio();
@@ -171,7 +171,7 @@ function playLine(word,slow=false,target='audioStatus'){
 }
 function clearMic(){if(limitTimer){clearTimeout(limitTimer);limitTimer=null}if(stream){try{stream.getTracks().forEach(t=>t.stop())}catch(e){}stream=null}}
 async function start(id){
- if(!phrase(id)||currentId||savingId){status(savingId?'Wait for the recording to finish saving before starting another.':'Finish the current recording first.');return}
+ if(!phrase(id)||currentId||savingId||transferBusy){status(transferBusy?'Wait until the voice-pack transfer finishes before recording.':savingId?'Wait for the recording to finish saving before starting another.':'Finish the current recording first.');return}
  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||typeof MediaRecorder==='undefined'){status('Recording needs Chrome with microphone permission.');return}
  stopAudio();currentId=id;parts=[];pendingMic=true;const request=++micSeq;
  status('Waiting for microphone permission…');render();
@@ -203,8 +203,10 @@ function cancel(){if(!pendingMic)return;micSeq++;pendingMic=false;currentId=null
 function finish(){if(rec&&rec.state!=='inactive')try{rec.stop()}catch(e){status('Could not stop: '+e.message);currentId=null;clearMic()}}
 const asDataURL=blob=>new Promise((res,rej)=>{const reader=new FileReader();reader.onload=()=>res(reader.result);reader.onerror=()=>rej(Error('Cannot encode audio'));reader.readAsDataURL(blob)});
 async function exportAll(){
+ if(transferBusy){status('Wait until the current voice-pack transfer finishes.');return}
  if(savingId){status('Saving your recording. Wait until it finishes before exporting voices.');return}
  if(currentId){status('Finish recording or cancel the microphone request before exporting voices.');return}
+ transferBusy=true;
  try{status('Preparing voice pack…');const clips=await storedAll();if(!clips.length){status('Record at least one word before exporting.');return}
   const data=[];for(const clip of clips)data.push({id:clip.id,data:await asDataURL(clip.blob)});
   const json=JSON.stringify({format:'CHamorU-voicepack-v1',clips:data});
@@ -212,12 +214,14 @@ async function exportAll(){
   const url=URL.createObjectURL(new Blob([json],{type:'application/json'}));
   const a=document.createElement('a');a.download='CHamorU-Family-Voice-Pack.json';a.href=url;document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),3000);status('Voice pack download started. Share it only with family you trust.');
- }catch(e){status('Export error: '+e.message)}
+ }catch(e){status('Export error: '+e.message)}finally{transferBusy=false}
 }
 async function importAll(input){
+ if(transferBusy){status('Wait until the current voice-pack transfer finishes.');if(input)input.value='';return}
  if(savingId){status('Saving your recording. Wait until it finishes before importing voices.');if(input)input.value='';return}
  if(currentId){status('Finish recording or cancel the microphone request before importing voices.');if(input)input.value='';return}
- const file=input.files&&input.files[0];if(!file)return;
+ const file=input&&input.files&&input.files[0];if(!file)return;
+ transferBusy=true;
  try{
   if(file.size>60*1024*1024)throw Error('File exceeds 60 MB');
   const pack=JSON.parse(await file.text());
@@ -240,7 +244,7 @@ async function importAll(input){
   }
   await saveImportedBatch(prepared);
   status('Imported '+prepared.length+' audio recording(s) to this device.'+(skipped?' '+skipped+' invalid or unsupported clip(s) skipped.':'')+' Check playback on this device.');await render();
- }catch(e){status('Import error: '+e.message)}finally{input.value=''}
+ }catch(e){status('Import error: '+e.message)}finally{transferBusy=false;input.value=''}
 }
 async function render(){
  const root=document.getElementById('voiceStudioList');if(!root)return;
