@@ -197,17 +197,18 @@ async function importAll(input){
   const pack=JSON.parse(await file.text());
   if(pack.format!=='CHamorU-voicepack-v1'||!Array.isArray(pack.clips)||pack.clips.length>WORDS.length)throw Error('Wrong voice-pack format');
   if(!confirm('Import '+pack.clips.length+' voice recordings? Existing matching words will be replaced.'))return;
-  let count=0;
+  let count=0,skipped=0;
   for(const entry of pack.clips){
-   if(!entry||!phrase(entry.id)||typeof entry.data!=='string'||entry.data.length>MAX*1.5)continue;
-   const match=entry.data.match(/^data:(audio\/(?:webm|mp4|ogg|wav|mpeg))(?:;codecs=([A-Za-z0-9._-]+(?:,[A-Za-z0-9._-]+)*))?;base64,([A-Za-z0-9+/=]+)$/i);if(!match)continue;
-   // MediaRecorder commonly exports audio/webm;codecs=opus. Preserve the codec
-   // during import while still rejecting unrelated or untrusted MIME parameters.
-   const raw=atob(match[3]);if(raw.length<64||raw.length>MAX)continue;
+   if(!entry||!phrase(entry.id)||typeof entry.data!=='string'||entry.data.length>MAX*1.5){skipped++;continue}
+   const match=entry.data.match(/^data:(audio\/(?:webm|mp4|ogg|wav|mpeg))(?:;codecs=([A-Za-z0-9._-]+(?:,[A-Za-z0-9._-]+)*))?;base64,([A-Za-z0-9+/=]+)$/i);
+   if(!match){skipped++;continue}
+   // Malformed base64 must not abort the whole import after earlier clips were saved.
+   let raw;try{raw=atob(match[3])}catch(e){skipped++;continue}
+   if(raw.length<64||raw.length>MAX){skipped++;continue}
    const bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
    await save(entry.id,new Blob([bytes],{type:match[1]+(match[2]?';codecs='+match[2]:'')}));count++;
   }
-  status('Imported '+count+' audio recording(s) to this device.');await render();
+  status('Imported '+count+' audio recording(s) to this device.'+(skipped?' '+skipped+' invalid or unsupported clip(s) skipped.':'')+' Check playback on this device.');await render();
  }catch(e){status('Import error: '+e.message)}finally{input.value=''}
 }
 async function render(){
