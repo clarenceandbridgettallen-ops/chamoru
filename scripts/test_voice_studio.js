@@ -43,7 +43,7 @@ function harness(settings={}){
         get(id){const q={};queueMicrotask(()=>{q.result=records.get(id);q.onsuccess?.()});return q},
         getAll(){const q={},snapshot=[...records.values()];if(settings.deferFirstGetAll&&!settings._deferredGetAll){settings._deferredGetAll=()=>{q.result=snapshot;q.onsuccess?.()}}else queueMicrotask(()=>{q.result=snapshot;q.onsuccess?.()});return q},
         put(value){if(value.id===settings.failPutOnId)throw Error('Synthetic storage quota failure');pending.push(value);complete()},
-        delete(id){deletions.push(id);complete()}
+        delete(id){if(settings.abortDelete){queueMicrotask(()=>tx.abort());return}deletions.push(id);complete()}
       });
       return tx;
     }
@@ -395,4 +395,16 @@ test('in-flight voice-pack export blocks capture and deletion until encoding fin
  assert.match(h.nodes.get('voiceStudioStatus').textContent,/Voice pack download started/);
  await h.c.CHVoice.start('mother');h.c.CHVoice.finish();await h.tick();
  assert.equal(h.records.has('mother'),true,'Capture allowed after export completes');
+});
+
+test('aborted IndexedDB delete reports failure without losing the family recording',async()=>{
+  const h=harness({abortDelete:true});h.c.voiceStudio();await h.tick();
+  await h.c.CHVoice.save('hafa',new Blob(['v'.repeat(128)],{type:'audio/webm'}));
+  const outcome=await Promise.race([
+    h.c.CHVoice.erase('hafa').then(()=> 'finished'),
+    new Promise(resolve=>setTimeout(()=>resolve('hung'),100))
+  ]);
+  assert.equal(outcome,'finished','Aborted deletion must not leave the UI awaiting forever');
+  assert.equal(h.records.has('hafa'),true,'Aborted transaction must preserve saved family audio');
+  assert.match(h.nodes.get('voiceStudioStatus').textContent,/Delete failed: Delete interrupted/);
 });
