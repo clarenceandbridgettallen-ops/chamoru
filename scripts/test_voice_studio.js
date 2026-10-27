@@ -17,7 +17,7 @@ test('app integrates recording studio and routes vocabulary through family voice
   assert.doesNotMatch(source,/\bfetch\s*\(|XMLHttpRequest|sendBeacon/);
 });
 function harness(settings={}){
-  const records=new Map(),played=[],status=[],audio=[],timeouts=[],nodes=new Map(),deviceStorage=new Map();
+  const records=new Map(settings.initialRecords||[]),played=[],status=[],audio=[],timeouts=[],nodes=new Map(),deviceStorage=new Map();
   const elem=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',textContent:'',id});return nodes.get(id)};
   const db={
     objectStoreNames:{contains:()=>true},
@@ -26,7 +26,7 @@ function harness(settings={}){
       const tx={};
       tx.objectStore=()=>({
         get(id){const q={};queueMicrotask(()=>{q.result=records.get(id);q.onsuccess?.()});return q},
-        getAll(){const q={};queueMicrotask(()=>{q.result=[...records.values()];q.onsuccess?.()});return q},
+        getAll(){const q={},snapshot=[...records.values()];if(settings.deferFirstGetAll&&!settings._deferredGetAll){settings._deferredGetAll=()=>{q.result=snapshot;q.onsuccess?.()}}else queueMicrotask(()=>{q.result=snapshot;q.onsuccess?.()});return q},
         put(value){records.set(value.id,value);queueMicrotask(()=>tx.oncomplete?.())},
         delete(id){records.delete(id);queueMicrotask(()=>tx.oncomplete?.())}
       });
@@ -51,7 +51,7 @@ function harness(settings={}){
     indexedDB,MediaRecorder:Recorder,Audio,
     localStorage:{getItem:k=>deviceStorage.get(k)||null,setItem:(k,v)=>deviceStorage.set(k,v)},
     navigator:{mediaDevices:settings.noMic?null:{getUserMedia}},
-    URL:{createObjectURL:()=> 'blob:testing-'+audio.length,revokeObjectURL(){}},
+    URL:{createObjectURL:blob=>{settings.createdBlobs?.push(blob);return 'blob:testing-'+audio.length},revokeObjectURL(){}},
     document:{getElementById:elem,body:{appendChild(){}},createElement:()=>({click(){},remove(){}})},
     APP:{innerHTML:''},guideNav:()=>'<nav></nav>',stop:()=>{},screen:'home',
     guidedPractice:()=>{},continueLearning:()=>{},play:(word,slow)=>status.push(['tts',word,slow]),
@@ -234,4 +234,28 @@ test('corrupt voice-pack clip is skipped without blocking later valid recordings
  assert.match(h.nodes.get('voiceStudioStatus').textContent,/1 invalid or unsupported clip/);
  assert.match(h.nodes.get('voiceStudioStatus').textContent,/Check playback on this device/);
  assert.equal(input.value,'');
+});
+
+// IndexedDB warmup may finish after a newer save or deletion. A stale snapshot
+// must never resurrect deleted family audio or replace a fresh recording.
+test('late voice-cache warmup preserves replacement and deletion',async()=>{
+ for(const action of ['replace','erase']){
+  const oldBlob=new Blob(['old'.repeat(60)],{type:'audio/webm'});
+  const freshBlob=new Blob(['new'.repeat(60)],{type:'audio/webm'});
+  const createdBlobs=[];
+  const settings={initialRecords:[['hafa',{id:'hafa',blob:oldBlob}]],deferFirstGetAll:true,createdBlobs};
+  const h=harness(settings);await h.tick();
+  assert.equal(typeof settings._deferredGetAll,'function','Warmup read must be held');
+  if(action==='replace')await h.c.CHVoice.save('hafa',freshBlob);
+  else await h.c.CHVoice.erase('hafa');
+  settings._deferredGetAll();await h.tick();
+  const started=h.c.CHVoice.playWord('Håfa adai!',null,false);
+  if(action==='replace'){
+   assert.equal(started,true);
+   assert.equal(createdBlobs.at(-1),freshBlob,'New recording must win over stale warmup');
+  }else{
+   assert.equal(started,false,'Deleted recording must not be revived');
+   assert.equal(createdBlobs.length,0);
+  }
+ }
 });
