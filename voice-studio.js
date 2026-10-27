@@ -1,9 +1,16 @@
 'use strict';
 /* CHamorU Private Family Voice Studio. All audio stays in the browser unless exported by user. */
 (function(global){
-const WORDS=[['hafa','Håfa adai!','Hello'],['thanks','Si Yu’os ma’åse’.','Thank you'],['yes','Hunggan.','Yes'],['no','Åhe’.','No'],['mother','Nåna','Mother'],['father','Tåta','Father'],['parent','Saina','Parent'],['child','Påtgon','Child']];
+const WORDS=[['hafa','Håfa adai!','Hello'],['thanks','Si Yu’os ma’åse’.','Thank you'],['yes','Hunggan.','Yes'],['no','Åhe’.','No'],['mother','Nåna','Mother'],['father','Tåta','Father'],['parent','Saina','Parent'],['child','Påtgon','Child'],
+ ['howareyou','Håfa tatatmanu hao?','How are you? · dialogue'],
+ ['imfine','Mamaolek ha’ yu’.','I am fine · dialogue'],
+ ['goodbye','Adios.','Goodbye · dialogue'],
+ ['canhelp','Kao siña un ayuda yo’?','Can you help me? · dialogue, wording pending fluent review'],
+ ['thanks-alt','Si Yu’us ma’åse’.','Thank you · existing dialogue variant, spelling pending fluent review'],
+ ['welcome','Buen probechu.','You are welcome · dialogue, spelling pending fluent review']];
 const DB='chamoru-family-voice-v1',MAX=3*1024*1024;
-let dbPromise=null,rec=null,stream=null,parts=[],currentId=null,limitTimer=null,player=null,audioUrl=null,playSeq=0,micSeq=0,pendingMic=false,message='';
+let dbPromise=null,rec=null,stream=null,parts=[],currentId=null,limitTimer=null,player=null,audioUrl=null,playSeq=0,micSeq=0,pendingMic=false,message='',audioTimer=null;
+const clipCache=new Map();let cacheReady=false,cachePromise=null;
 function phrase(id){return WORDS.find(w=>w[0]===id)}
 function status(s){message=s;const el=document.getElementById('voiceStudioStatus');if(el)el.textContent=s}
 function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -31,42 +38,83 @@ async function save(id,blob){
  const db=await database();return new Promise((resolve,reject)=>{
   const tx=db.transaction('clips','readwrite');
   tx.objectStore('clips').put({id,blob,mime:blob.type||'audio/webm',savedAt:new Date().toISOString()});
-  tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||Error('Storage failed'));tx.onabort=()=>reject(tx.error||Error('Save interrupted'));
+  tx.oncomplete=()=>{clipCache.set(id,blob);resolve()};tx.onerror=()=>reject(tx.error||Error('Storage failed'));tx.onabort=()=>reject(tx.error||Error('Save interrupted'));
  });
 }
 async function erase(id){
  if(!phrase(id))return;
  if(!global.confirm('Delete your saved recording of '+phrase(id)[1]+'?'))return;
  stopAudio();
- try{const db=await database();await new Promise((res,rej)=>{const tx=db.transaction('clips','readwrite');tx.objectStore('clips').delete(id);tx.oncomplete=res;tx.onerror=()=>rej(tx.error)});status('Recording deleted.');await render()}
+ try{const db=await database();await new Promise((res,rej)=>{const tx=db.transaction('clips','readwrite');tx.objectStore('clips').delete(id);tx.oncomplete=()=>{clipCache.delete(id);res()};tx.onerror=()=>rej(tx.error)});status('Recording deleted.');await render()}
  catch(e){status('Delete failed: '+e.message)}
+}
+
+// Eagerly load small saved blobs so a tap starts playback synchronously.
+// Android may drop user-activation privileges after an IndexedDB await.
+function warm(){
+ if(cachePromise)return cachePromise;
+ cachePromise=storedAll().then(rows=>{
+  for(const item of rows){if(item&&item.blob&&item.blob.size&&item.blob.size<=MAX)clipCache.set(item.id,item.blob)}
+  cacheReady=true;return clipCache.size;
+ }).catch(e=>{cachePromise=null;cacheReady=false;throw e});
+ return cachePromise;
+}
+function report(text,target='audioStatus'){
+ const e=document.getElementById(target);
+ if(e)e.textContent=text;
+ else status(text);
 }
 function stopAudio(){
  playSeq++;
+ if(audioTimer){clearTimeout(audioTimer);audioTimer=null}
  if(player){try{player.pause();player.removeAttribute('src');player.load()}catch(e){}player=null}
  if(audioUrl){URL.revokeObjectURL(audioUrl);audioUrl=null}
 }
-async function replay(id,slow){
- const seq=++playSeq;let item;
- try{item=await stored(id)}catch(e){status('Could not read recording: '+e.message);return}
- if(seq!==playSeq)return;
- if(!item){status('No recording for '+phrase(id)[1]+' yet.');return}
- stopAudio();const active=playSeq;
- try{
-  audioUrl=URL.createObjectURL(item.blob);player=new Audio(audioUrl);player.playbackRate=slow?.8:1;player.volume=1;
-  player.onended=()=>{if(active===playSeq){stopAudio();status('Playback finished.')}};player.onerror=()=>{if(active===playSeq){stopAudio();status('Audio file could not play. Record again in Chrome.')}};
-  const promise=player.play();if(promise&&promise.catch)promise.catch(e=>{if(active===playSeq){stopAudio();status('Sound blocked: '+(e.name||e.message)+'. Try Chrome.')}});
-  status('Playing the family recording…');
- }catch(e){if(active===playSeq){stopAudio();status('Audio error: '+e.message)}}
+function wordId(word){
+ const normalize=s=>String(s||'').trim().toLocaleLowerCase().replace(/['’ʼ]/g,'’').replace(/[.!?。]+$/g,'').trim();
+ const w=normalize(word);
+ const entry=WORDS.find(x=>normalize(x[1])===w);
+ return entry?entry[0]:null;
 }
-async function playWord(word,fallback,slow){
- const match=WORDS.find(w=>w[1]===word);
- if(match){
-  try{if(await stored(match[0])){replay(match[0],slow);return}}catch(e){}
+function playCached(id,slow,target='voiceStudioStatus'){
+ const item=clipCache.get(id);
+ if(!item){report('No family recording for '+(phrase(id)?.[1]||'this phrase')+'. Open Family Voice Studio to record one.',target);return false}
+ // This synchronous method is called directly from the click handler.
+ stopAudio();const token=playSeq;
+ try{
+  audioUrl=URL.createObjectURL(item);
+  player=new Audio(audioUrl);player.volume=1;player.playbackRate=slow?.8:1;player.preload='auto';
+  let started=false;
+  const close=(msg)=>{if(token!==playSeq)return;stopAudio();report(msg,target)};
+  player.onplaying=()=>{if(token!==playSeq)return;started=true;if(audioTimer){clearTimeout(audioTimer);audioTimer=null}report('Playing saved family recording (speaker pronunciation has not been independently reviewed).',target)};
+  player.onended=()=>close('Recording finished. Replay it or continue learning.');
+  player.onerror=()=>close('Saved recording could not be decoded by this browser. Make a fresh recording in Chrome.');
+  audioTimer=setTimeout(()=>{if(token===playSeq&&!started)close('Recording did not begin after 7 seconds. Check the audio format or record again.')},7000);
+  const promise=player.play();
+  if(promise&&promise.catch)promise.catch(e=>close('Recording playback blocked: '+(e.name||e.message||'unknown error')+'. Try again.'));
+  report('Starting saved family voice…',target);return true;
+ }catch(e){stopAudio();report('Could not start recording: '+e.message,target);return false}
+}
+function replay(id,slow=false){return playCached(id,slow,'voiceStudioStatus')}
+function playWord(word,fallback,slow){
+ const id=wordId(word);
+ if(!id){report('A family recording is not yet offered for this phrase. Written practice still works.');return false}
+ if(!cacheReady){
+  report('Loading your saved family voices. Tap Hear it again when loading finishes.');
+  warm().then(()=>report('Family voices loaded. Tap Hear it again.')).catch(e=>report('Cannot load saved voices: '+e.message));
+  return false;
  }
- if(typeof lessonAudioStatus==='function')lessonAudioStatus('No family voice saved yet. Trying unverified demonstration audio.');
- if(match&&match[0]==='hafa'&&typeof playStoredGreeting==='function')playStoredGreeting(slow);
- else if(typeof play==='function')play(fallback,slow);
+ return playCached(id,slow,'audioStatus');
+}
+function playLine(word,slow=false,target='audioStatus'){
+ const id=wordId(word);
+ if(!id){report('No saved voice entry for this complete phrase. Read the CHamoru text and continue without audio.',target);return false}
+ if(!cacheReady){
+  report('Preparing the family voice library. Tap Replay again once ready.',target);
+  warm().then(()=>report('Voice library ready. Tap Replay again.',target)).catch(e=>report('Voice library unavailable: '+e.message,target));
+  return false;
+ }
+ return playCached(id,slow,target);
 }
 function clearMic(){if(limitTimer){clearTimeout(limitTimer);limitTimer=null}if(stream){try{stream.getTracks().forEach(t=>t.stop())}catch(e){}stream=null}}
 async function start(id){
@@ -103,7 +151,7 @@ async function exportAll(){
  try{status('Preparing voice pack…');const clips=await storedAll();if(!clips.length){status('Record at least one word before exporting.');return}
   const data=[];for(const clip of clips)data.push({id:clip.id,data:await asDataURL(clip.blob)});
   const json=JSON.stringify({format:'CHamorU-voicepack-v1',clips:data});
-  if(json.length>40*1024*1024)throw Error('Pack too large');
+  if(json.length>60*1024*1024)throw Error('Pack too large');
   const url=URL.createObjectURL(new Blob([json],{type:'application/json'}));
   const a=document.createElement('a');a.download='CHamorU-Family-Voice-Pack.json';a.href=url;document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),3000);status('Voice pack download started. Share it only with family you trust.');
@@ -112,7 +160,7 @@ async function exportAll(){
 async function importAll(input){
  const file=input.files&&input.files[0];if(!file)return;
  try{
-  if(file.size>40*1024*1024)throw Error('File exceeds 27 MB');
+  if(file.size>60*1024*1024)throw Error('File exceeds 60 MB');
   const pack=JSON.parse(await file.text());
   if(pack.format!=='CHamorU-voicepack-v1'||!Array.isArray(pack.clips)||pack.clips.length>WORDS.length)throw Error('Wrong voice-pack format');
   if(!confirm('Import '+pack.clips.length+' voice recordings? Existing matching words will be replaced.'))return;
@@ -169,7 +217,8 @@ if(global.addEventListener)global.addEventListener('pagehide',function(){
  clearMic();stopAudio();
 });
 
-global.CHVoice={open,render,start,cancel,finish,replay,erase,exportAll,importAll,playWord,stored,save,storedAll,stopAudio,phrase};
+warm().catch(()=>{});
+global.CHVoice={open,render,start,cancel,finish,replay,erase,exportAll,importAll,playWord,playLine,wordId,warm,stored,save,storedAll,stopAudio,phrase};
 global.voiceStudio=open;
 global.playVocab=playWord;
 })(window);
