@@ -12,7 +12,7 @@ const DB='chamoru-family-voice-v1',MAX=3*1024*1024;
 let dbPromise=null,rec=null,stream=null,parts=[],currentId=null,limitTimer=null,player=null,audioUrl=null,playSeq=0,micSeq=0,pendingMic=false,message='',audioTimer=null;
 const clipCache=new Map();let cacheReady=false,cachePromise=null;
 const SOUND_CHECK_KEY='chamoru-device-audio-check-v1';
-let lastPlayedId=null;const soundChecks=(()=>{
+let lastPlayedId=null,voiceFilter='starter';const soundChecks=(()=>{
  try{return JSON.parse(localStorage.getItem(SOUND_CHECK_KEY)||'{}')||{}}catch(e){return {}}
 })();
 function confirmSound(heard){
@@ -198,8 +198,10 @@ async function importAll(input){
 }
 async function render(){
  const root=document.getElementById('voiceStudioList');if(!root)return;
+ const buttons=document.querySelectorAll?document.querySelectorAll('[data-chvoice-filter]'):[];
+ for(const btn of buttons)btn.setAttribute('aria-pressed',String(btn.dataset.chvoiceFilter===voiceFilter));
  let have=new Set();try{have=new Set((await storedAll()).map(x=>x.id))}catch(e){status('Local storage unavailable: '+e.message)}
- root.innerHTML=WORDS.map(w=>{
+ root.innerHTML=(voiceFilter==='starter'?WORDS.slice(0,8):WORDS.slice(8)).map(w=>{
   const on=currentId===w[0],saved=have.has(w[0]),heard=soundChecks[w[0]];
   return '<article class="chvoice-item"><div><strong>'+escapeHTML(w[1])+'</strong><div class="small muted">'+escapeHTML(w[2])+' · '+(saved?'Saved on this phone':'No recording yet')+(heard?' · Your playback check: '+(heard.heard?'Heard':'Silent'):'')+'</div></div><div class="chvoice-actions">'+
     (on?(pendingMic?'<button class="secondary" onclick="CHVoice.cancel()">Cancel microphone request</button>':'<button class="primary" onclick="CHVoice.finish()">■ Stop & Save</button>'):'<button class="secondary" onclick="CHVoice.start(\''+w[0]+'\')" '+(currentId?'disabled':'')+'>● Record</button>')+
@@ -207,6 +209,12 @@ async function render(){
     '<button class="secondary" onclick="CHVoice.erase(\''+w[0]+'\')" '+(!saved||currentId?'disabled':'')+'>Delete</button></div></article>';
  }).join('');
  status(message||'Tap Record, speak, then Stop & Save. Play it back to check.');
+}
+function filter(group){
+ if(currentId){status('Finish the current recording first.');return}
+ if(group!=='starter'&&group!=='dialogue')return;
+ voiceFilter=group;lastPlayedId=null;const check=document.getElementById('voicePlaybackCheck');if(check)check.hidden=true;
+ render();
 }
 function open(){
  if(currentId){status('Finish recording before leaving.');return}
@@ -216,6 +224,7 @@ function open(){
  '<p class="small muted">Private by default: recordings are saved only in this browser. They are never uploaded automatically. Family recordings are not independently certified pronunciation.</p>'+
  '<p id="voiceStudioStatus" class="chvoice-status" role="status">Opening your voice library…</p>'+
  '<div id="voicePlaybackCheck" class="chvoice-confirm" hidden><strong>Could you hear <span id="voicePlaybackWord">the recording</span>?</strong><p class="small muted">This is a speaker test, not a pronunciation grade.</p><div class="btnrow"><button class="secondary" onclick="CHVoice.confirmSound(true)">Yes, I heard it</button><button class="secondary" onclick="CHVoice.confirmSound(false)">Still silent</button></div></div>'+
+ '<div class="btnrow chvoice-filters" role="group" aria-label="Choose which recordings to work on"><button class="secondary" data-chvoice-filter="starter" aria-pressed="true" onclick="CHVoice.filter(\'starter\')">Starter + Family (8)</button><button class="secondary" data-chvoice-filter="dialogue" aria-pressed="false" onclick="CHVoice.filter(\'dialogue\')">Conversations (6)</button></div>'+
  '<div id="voiceStudioList" class="chvoice-list"></div>'+
  '<div class="chvoice-transfer"><h3>Share with another family phone</h3><p class="small muted">Export a voice pack and send the JSON file yourself, then import on another device.</p>'+
  '<div class="btnrow"><button class="secondary" onclick="CHVoice.exportAll()">↓ Export voices</button><label class="chvoice-import secondary">↑ Import voices<input type="file" accept=".json,application/json" onchange="CHVoice.importAll(this)"></label></div></div>'+
@@ -241,7 +250,7 @@ if(global.addEventListener)global.addEventListener('pagehide',function(){
 });
 
 warm().catch(()=>{});
-global.CHVoice={open,render,start,cancel,finish,replay,erase,exportAll,importAll,playWord,playLine,wordId,warm,stored,save,storedAll,stopAudio,phrase,confirmSound};
+global.CHVoice={open,render,start,cancel,finish,replay,erase,exportAll,importAll,playWord,playLine,wordId,warm,stored,save,storedAll,stopAudio,phrase,confirmSound,filter};
 global.voiceStudio=open;
 global.playVocab=playWord;
 })(window);
