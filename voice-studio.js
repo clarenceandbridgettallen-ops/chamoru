@@ -11,6 +11,27 @@ const WORDS=[['hafa','Håfa adai!','Hello'],['thanks','Si Yu’os ma’åse’.'
 const DB='chamoru-family-voice-v1',MAX=3*1024*1024;
 let dbPromise=null,rec=null,stream=null,parts=[],currentId=null,limitTimer=null,player=null,audioUrl=null,playSeq=0,micSeq=0,pendingMic=false,message='',audioTimer=null;
 const clipCache=new Map();let cacheReady=false,cachePromise=null;
+const SOUND_CHECK_KEY='chamoru-device-audio-check-v1';
+let lastPlayedId=null;const soundChecks=(()=>{
+ try{return JSON.parse(localStorage.getItem(SOUND_CHECK_KEY)||'{}')||{}}catch(e){return {}}
+})();
+function confirmSound(heard){
+ if(!lastPlayedId)return;
+ const id=lastPlayedId;const word=phrase(id)?.[1]||'this clip';
+ soundChecks[id]={heard:!!heard,checkedAt:new Date().toISOString()};
+ try{localStorage.setItem(SOUND_CHECK_KEY,JSON.stringify(soundChecks))}catch(e){}
+ const area=document.getElementById('voicePlaybackCheck');
+ if(area)area.hidden=true;
+ status(heard?'Audio heard for '+word+'. This checks playback only, not CHamoru pronunciation.':'Recording playback was silent for '+word+'. Try recording again, then Play. Audio mastery stays unavailable.');
+ render();
+}
+function offerPlaybackCheck(id){
+ if(!document.getElementById('voiceStudioStatus'))return;
+ lastPlayedId=id;const check=document.getElementById('voicePlaybackCheck');
+ const word=document.getElementById('voicePlaybackWord');
+ if(word)word.textContent=phrase(id)?.[1]||'this phrase';
+ if(check)check.hidden=false;
+}
 function phrase(id){return WORDS.find(w=>w[0]===id)}
 function status(s){message=s;const el=document.getElementById('voiceStudioStatus');if(el)el.textContent=s}
 function escapeHTML(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
@@ -86,7 +107,7 @@ function playCached(id,slow,target='voiceStudioStatus'){
   player=new Audio(audioUrl);player.volume=1;player.playbackRate=slow?.8:1;player.preload='auto';
   let started=false;
   const close=(msg)=>{if(token!==playSeq)return;stopAudio();report(msg,target)};
-  player.onplaying=()=>{if(token!==playSeq)return;started=true;if(audioTimer){clearTimeout(audioTimer);audioTimer=null}report('Playing saved family recording (speaker pronunciation has not been independently reviewed).',target)};
+  player.onplaying=()=>{if(token!==playSeq)return;started=true;if(audioTimer){clearTimeout(audioTimer);audioTimer=null}report('Playing saved family recording (pronunciation not independently reviewed).',target);if(target==='voiceStudioStatus')offerPlaybackCheck(id)};
   player.onended=()=>close('Recording finished. Replay it or continue learning.');
   player.onerror=()=>close('Saved recording could not be decoded by this browser. Make a fresh recording in Chrome.');
   audioTimer=setTimeout(()=>{if(token===playSeq&&!started)close('Recording did not begin after 7 seconds. Check the audio format or record again.')},7000);
@@ -179,8 +200,8 @@ async function render(){
  const root=document.getElementById('voiceStudioList');if(!root)return;
  let have=new Set();try{have=new Set((await storedAll()).map(x=>x.id))}catch(e){status('Local storage unavailable: '+e.message)}
  root.innerHTML=WORDS.map(w=>{
-  const on=currentId===w[0],saved=have.has(w[0]);
-  return '<article class="chvoice-item"><div><strong>'+escapeHTML(w[1])+'</strong><div class="small muted">'+escapeHTML(w[2])+' · '+(saved?'Saved on this phone':'No recording yet')+'</div></div><div class="chvoice-actions">'+
+  const on=currentId===w[0],saved=have.has(w[0]),heard=soundChecks[w[0]];
+  return '<article class="chvoice-item"><div><strong>'+escapeHTML(w[1])+'</strong><div class="small muted">'+escapeHTML(w[2])+' · '+(saved?'Saved on this phone':'No recording yet')+(heard?' · Your playback check: '+(heard.heard?'Heard':'Silent'):'')+'</div></div><div class="chvoice-actions">'+
     (on?(pendingMic?'<button class="secondary" onclick="CHVoice.cancel()">Cancel microphone request</button>':'<button class="primary" onclick="CHVoice.finish()">■ Stop & Save</button>'):'<button class="secondary" onclick="CHVoice.start(\''+w[0]+'\')" '+(currentId?'disabled':'')+'>● Record</button>')+
     '<button class="secondary" onclick="CHVoice.replay(\''+w[0]+'\')" '+(!saved||currentId?'disabled':'')+'>▶ Play</button>'+
     '<button class="secondary" onclick="CHVoice.erase(\''+w[0]+'\')" '+(!saved||currentId?'disabled':'')+'>Delete</button></div></article>';
@@ -193,7 +214,9 @@ function open(){
  APP.innerHTML=guideNav('practice')+'<section class="panel chvoice-panel"><div class="sectionLabel">CHAMORU FAMILY VOICE STUDIO</div><h2>🎙️ Record our language</h2>'+
  '<p>Record a family speaker saying the words and use the recordings in your lessons. This does not need the silent phone voice engine.</p>'+
  '<p class="small muted">Private by default: recordings are saved only in this browser. They are never uploaded automatically. Family recordings are not independently certified pronunciation.</p>'+
- '<p id="voiceStudioStatus" class="chvoice-status" role="status">Opening your voice library…</p><div id="voiceStudioList" class="chvoice-list"></div>'+
+ '<p id="voiceStudioStatus" class="chvoice-status" role="status">Opening your voice library…</p>'+
+ '<div id="voicePlaybackCheck" class="chvoice-confirm" hidden><strong>Could you hear <span id="voicePlaybackWord">the recording</span>?</strong><p class="small muted">This is a speaker test, not a pronunciation grade.</p><div class="btnrow"><button class="secondary" onclick="CHVoice.confirmSound(true)">Yes, I heard it</button><button class="secondary" onclick="CHVoice.confirmSound(false)">Still silent</button></div></div>'+
+ '<div id="voiceStudioList" class="chvoice-list"></div>'+
  '<div class="chvoice-transfer"><h3>Share with another family phone</h3><p class="small muted">Export a voice pack and send the JSON file yourself, then import on another device.</p>'+
  '<div class="btnrow"><button class="secondary" onclick="CHVoice.exportAll()">↓ Export voices</button><label class="chvoice-import secondary">↑ Import voices<input type="file" accept=".json,application/json" onchange="CHVoice.importAll(this)"></label></div></div>'+
  '</section><div class="stickybar"><button class="secondary" onclick="guidedPractice()">← Back</button><button class="primary" onclick="continueLearning()">NEXT: Continue learning →</button></div>';
@@ -218,7 +241,7 @@ if(global.addEventListener)global.addEventListener('pagehide',function(){
 });
 
 warm().catch(()=>{});
-global.CHVoice={open,render,start,cancel,finish,replay,erase,exportAll,importAll,playWord,playLine,wordId,warm,stored,save,storedAll,stopAudio,phrase};
+global.CHVoice={open,render,start,cancel,finish,replay,erase,exportAll,importAll,playWord,playLine,wordId,warm,stored,save,storedAll,stopAudio,phrase,confirmSound};
 global.voiceStudio=open;
 global.playVocab=playWord;
 })(window);
