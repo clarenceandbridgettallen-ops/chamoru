@@ -1,5 +1,16 @@
 # CHamorU QA Audit
 
+## 2026-10-28 03:41–03:43 ET | Stop stale cross-tab audio already playing
+
+**CODE UPDATED + VERIFIED CI; physical Android audio remains unverified.** Inspected latest public main and 14-phrase Family Voice Studio, existing cross-tab cache refresh, source, test harness and QA history before editing. Found a source-level race: when another tab replaced or deleted a saved phrase, the receiving tab invalidated its cache but an existing Audio instance could keep playing the old Blob. A late `onplaying` event could offer a device-audibility confirmation for that superseded recording.
+
+- **Fix:** `voice-studio.js` commit `9a0c66b0ee35c52557faac7f31855c9b55099c5e` tracks the active phrase and stops playback immediately on matching cross-tab replace/delete. Existing playback cleanup invalidates callbacks and clears the active phrase. Only phrase IDs cross BroadcastChannel; no audio, recordings or personal data are transmitted.
+- **Regression:** `scripts/test_voice_studio.js` commit `20e547254ecdf6d8bafbb3d6e00f5cc7ac1b7746` tests a simulated second tab replacing and deleting a phrase during playback, verifies the old Audio is paused, stale sound confirmation closes, and the replacement can be replayed. This is synthetic VM audio, not physical listening.
+- **CI:** GitHub Actions run https://github.com/clarenceandbridgettallen-ops/chamoru/actions/runs/40651754277 completed SUCCESS: **55 passed, 0 failed** (raw job log). Pages run https://github.com/clarenceandbridgettallen-ops/chamoru/actions/runs/40651754165 was still IN PROGRESS at this check; do not call the fix deployed until confirmed.
+- **Preserved:** IndexedDB schema and keys, 14 phrases, private local voice pack consent/import/export, progress/XP, written mastery, dialogue, reader, Back/Next, and text-only fallback. No paid browser automation or private recording access.
+- **Remaining:** Actual Samsung Record → Stop & Save → audible Play, two-device transfer, and fluent CHamoru pronunciation review. Browser GPU/Sites access is unrelated. Next verify Pages then physical Android flow with user consent.
+
+
 ## 2026-10-27 20:44 ET | Wait for IndexedDB read transaction commit (52-test CI)
 
 **CODE UPDATED + VERIFIED CI. Actual Android microphone/audio and fluent pronunciation remain unverified.**
