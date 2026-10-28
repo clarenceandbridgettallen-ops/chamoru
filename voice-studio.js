@@ -10,7 +10,25 @@ const WORDS=[['hafa','Håfa adai!','Hello'],['thanks','Si Yu’os ma’åse’.'
  ['welcome','Buen probechu.','You are welcome · dialogue, spelling pending fluent review']];
 const DB='chamoru-family-voice-v1',MAX=3*1024*1024;
 let dbPromise=null,rec=null,stream=null,parts=[],currentId=null,limitTimer=null,player=null,audioUrl=null,playSeq=0,micSeq=0,pendingMic=false,savingId=null,transferBusy=false,message='',audioTimer=null;
-const clipCache=new Map(),cacheTouched=new Set();let cacheReady=false,cachePromise=null;
+const clipCache=new Map(),cacheTouched=new Set();let cacheReady=false,cachePromise=null,cacheEpoch=0;
+// Cross-tab messages contain phrase IDs only, never private recordings.
+let voiceUpdates=null;
+function externalClipChange(ids){
+ const valid=Array.isArray(ids)?ids.filter(id=>typeof id==='string'&&phrase(id)):[];
+ if(!valid.length)return;
+ cacheEpoch++;cachePromise=null;cacheReady=false;
+ for(const id of valid){clipCache.delete(id);cacheTouched.delete(id);invalidateSoundCheck(id)}
+ warm().catch(()=>{});
+}
+try{
+ if(typeof global.BroadcastChannel==='function'){
+  voiceUpdates=new global.BroadcastChannel('chamoru-family-voice-updates-v1');
+  voiceUpdates.onmessage=event=>{const data=event&&event.data;if(data&&data.type==='clips-changed')externalClipChange(data.ids)};
+ }
+}catch(e){voiceUpdates=null}
+function announceClipChange(ids){
+ if(voiceUpdates)try{voiceUpdates.postMessage({type:'clips-changed',ids})}catch(e){}
+}
 const SOUND_CHECK_KEY='chamoru-device-audio-check-v1';
 let lastPlayedId=null,voiceFilter='starter';const soundChecks=(()=>{
  try{return JSON.parse(localStorage.getItem(SOUND_CHECK_KEY)||'{}')||{}}catch(e){return {}}
@@ -71,7 +89,7 @@ async function save(id,blob){
  const db=await database();return new Promise((resolve,reject)=>{
   const tx=db.transaction('clips','readwrite');
   tx.objectStore('clips').put({id,blob,mime:blob.type||'audio/webm',savedAt:new Date().toISOString()});
-  tx.oncomplete=()=>{cacheTouched.add(id);clipCache.set(id,blob);invalidateSoundCheck(id);resolve()};tx.onerror=()=>reject(tx.error||Error('Storage failed'));tx.onabort=()=>reject(tx.error||Error('Save interrupted'));
+  tx.oncomplete=()=>{cacheTouched.add(id);clipCache.set(id,blob);invalidateSoundCheck(id);announceClipChange([id]);resolve()};tx.onerror=()=>reject(tx.error||Error('Storage failed'));tx.onabort=()=>reject(tx.error||Error('Save interrupted'));
  });
 }
 // All valid clips share one IndexedDB transaction, so a quota/storage error
@@ -87,7 +105,7 @@ async function saveImportedBatch(entries){
   }catch(e){try{tx.abort()}catch(_){}reject(e);return}
   tx.oncomplete=()=>{
    for(const {id,blob} of entries){cacheTouched.add(id);clipCache.set(id,blob);invalidateSoundCheck(id)}
-   resolve();
+   announceClipChange(entries.map(x=>x.id));resolve();
   };
   tx.onerror=()=>reject(tx.error||Error('Import storage failed'));
   tx.onabort=()=>reject(tx.error||Error('Import cancelled'));
@@ -98,7 +116,7 @@ async function erase(id){
  if(!phrase(id))return;
  if(!global.confirm('Delete your saved recording of '+phrase(id)[1]+'?'))return;
  stopAudio();
- try{const db=await database();await new Promise((res,rej)=>{const tx=db.transaction('clips','readwrite');tx.objectStore('clips').delete(id);tx.oncomplete=()=>{cacheTouched.add(id);clipCache.delete(id);invalidateSoundCheck(id);res()};tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error||Error('Delete interrupted'))});status('Recording deleted.');await render()}
+ try{const db=await database();await new Promise((res,rej)=>{const tx=db.transaction('clips','readwrite');tx.objectStore('clips').delete(id);tx.oncomplete=()=>{cacheTouched.add(id);clipCache.delete(id);invalidateSoundCheck(id);announceClipChange([id]);res()};tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error||Error('Delete interrupted'))});status('Recording deleted.');await render()}
  catch(e){status('Delete failed: '+e.message)}
 }
 
@@ -106,10 +124,12 @@ async function erase(id){
 // Android may drop user-activation privileges after an IndexedDB await.
 function warm(){
  if(cachePromise)return cachePromise;
+ const epoch=cacheEpoch;
  cachePromise=storedAll().then(rows=>{
+  if(epoch!==cacheEpoch)return clipCache.size;
   for(const item of rows){if(item&&item.blob&&item.blob.size&&item.blob.size<=MAX&&!cacheTouched.has(item.id))clipCache.set(item.id,item.blob)}
   cacheReady=true;return clipCache.size;
- }).catch(e=>{cachePromise=null;cacheReady=false;throw e});
+ }).catch(e=>{if(epoch===cacheEpoch){cachePromise=null;cacheReady=false}throw e});
  return cachePromise;
 }
 function report(text,target='audioStatus'){
