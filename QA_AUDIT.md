@@ -1,5 +1,13 @@
 # CHamorU QA Audit
 
+## 2026-10-28 13:55 ET | Same-tab voice playback fix CI and Pages confirmed
+
+**VERIFIED CI + SUCCESSFUL PAGES WORKFLOW; physical Android audio still unverified.** After source commit `714913e018fc71b6d86a1013b67ce4c28c6a0619`, test commit `49a77de0b94449160c128b7cbd8ae790385e69d0`, and prior audit commit `2974e780677487c6a22e1862c41a8672b52bf623`, read GitHub Actions runs and raw job logs:
+- Learner/voice/phoneme QA [run 40739781515](https://github.com/clarenceandbridgettallen-ops/chamoru/actions/runs/40739781515) completed **SUCCESS, 56 tests passed, 0 failed**. Raw log explicitly confirms new test `same-tab saved replacement and voice-pack import stop superseded audio before confirmation` passed as test 56.
+- GitHub Pages [run 40739819701](https://github.com/clarenceandbridgettallen-ops/chamoru/actions/runs/40739819701) completed **SUCCESS** for the audit HEAD, including build, deploy and report jobs. This proves the workflow, not independent live-browser HTML bytes, audio decoding or physical phone playback.
+- No actual Android microphone, speaker, two-device transfer or fluent pronunciation tests; no private recording uploaded. Existing storage/progress keys and 14 phrases remain preserved.
+
+
 ## 2026-10-28 13:48 ET | Same-tab audio replacement and import race
 
 **CODE UPDATED + SYNTHETIC PREFLIGHT TESTED; GitHub Actions and physical Android playback not yet verified.** Inspected public main, 14-phrase voice storage/playback source, 55-test history, and cross-tab playback protection before editing. Found a remaining local-tab race: replacing a clip through the public save API or importing a matching voice-pack entry could update the cached Blob while the previous Audio instance continued playing, permitting stale manual audibility feedback.
