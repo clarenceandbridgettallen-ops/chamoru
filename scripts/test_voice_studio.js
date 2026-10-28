@@ -480,3 +480,32 @@ test('old pending warmup cannot restore a clip replaced in another tab',async()=
  assert.equal(b.c.CHVoice.playWord('Håfa adai!',null,false),true);
  assert.equal(opts.createdBlobs.at(-1),freshBlob,'Stale pending warmup must not replace new clip');
 });
+
+
+test('cross-tab clip replacement stops already playing stale audio before audibility confirmation',async()=>{
+ const records=new Map(),channels=[];
+ class Channel{
+  constructor(name){this.name=name;channels.push(this)}
+  postMessage(data){for(const other of channels)if(other!==this&&other.name===this.name)queueMicrotask(()=>other.onmessage?.({data}))}
+ }
+ const a=harness({sharedRecords:records,BroadcastChannel:Channel});
+ const b=harness({sharedRecords:records,BroadcastChannel:Channel});
+ await a.tick();await b.tick();
+ const oldClip=new Blob(['old'.repeat(80)],{type:'audio/webm'});
+ const replacement=new Blob(['replacement'.repeat(80)],{type:'audio/webm'});
+ await a.c.CHVoice.save('hafa',oldClip);await b.tick();
+ assert.equal(b.c.CHVoice.replay('hafa'),true);
+ const oldPlayer=b.played.at(-1);
+ assert.equal(oldPlayer.paused,undefined);
+ assert.equal(b.nodes.get('voicePlaybackCheck').hidden,false);
+ await a.c.CHVoice.save('hafa',replacement);await b.tick();
+ assert.equal(oldPlayer.paused,true,'A replaced recording must stop playing in other tabs');
+ assert.equal(b.nodes.get('voicePlaybackCheck').hidden,true,'Old audibility confirmation must close');
+ b.c.CHVoice.confirmSound(true);
+ assert.equal(b.deviceStorage.has('chamoru-device-audio-check-v1'),false,'Stale playback must not be confirmed');
+ assert.equal(b.c.CHVoice.replay('hafa'),true,'New recording should be replayable');
+ const newPlayer=b.played.at(-1);
+ await a.c.CHVoice.erase('hafa');await b.tick();
+ assert.equal(newPlayer.paused,true,'Deletion must stop audio already playing in another tab');
+ assert.equal(b.c.CHVoice.replay('hafa'),false,'Deleted recording must stay unavailable');
+});
