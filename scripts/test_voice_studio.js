@@ -509,3 +509,33 @@ test('cross-tab clip replacement stops already playing stale audio before audibi
  assert.equal(newPlayer.paused,true,'Deletion must stop audio already playing in another tab');
  assert.equal(b.c.CHVoice.replay('hafa'),false,'Deleted recording must stay unavailable');
 });
+
+
+test('same-tab saved replacement and voice-pack import stop superseded audio before confirmation',async()=>{
+ const h=harness();h.c.atob=s=>Buffer.from(s,'base64').toString('binary');
+ h.c.voiceStudio();await h.tick();
+ const clip=text=>new Blob([text.repeat(80)],{type:'audio/webm'});
+ await h.c.CHVoice.save('hafa',clip('original'));
+ assert.equal(h.c.CHVoice.replay('hafa'),true);
+ const first=h.played.at(-1);
+ assert.equal(h.nodes.get('voicePlaybackCheck').hidden,false);
+ await h.c.CHVoice.save('hafa',clip('replacement'));await h.tick();
+ assert.equal(first.paused,true,'Same-tab save must stop superseded playback');
+ assert.equal(h.nodes.get('voicePlaybackCheck').hidden,true);
+ h.c.CHVoice.confirmSound(true);
+ assert.equal(h.deviceStorage.has('chamoru-device-audio-check-v1'),false);
+ assert.equal(h.c.CHVoice.replay('hafa'),true);
+ const second=h.played.at(-1);
+ const payload=Buffer.from('imported'.repeat(30)).toString('base64');
+ const pack=JSON.stringify({format:'CHamorU-voicepack-v1',clips:[
+  {id:'hafa',data:'data:audio/webm;base64,'+payload}
+ ]});
+ const input={files:[{size:pack.length,text:async()=>pack}],value:'selected'};
+ await h.c.CHVoice.importAll(input);await h.tick();
+ assert.equal(second.paused,true,'Same-tab import must stop superseded playback');
+ assert.equal(h.nodes.get('voicePlaybackCheck').hidden,true);
+ h.c.CHVoice.confirmSound(true);
+ assert.equal(h.deviceStorage.has('chamoru-device-audio-check-v1'),false);
+ assert.equal(h.c.CHVoice.replay('hafa'),true,'Imported replacement remains playable');
+ assert.equal(h.played.length,3);
+});
