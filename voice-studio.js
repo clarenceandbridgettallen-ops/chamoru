@@ -92,7 +92,7 @@ async function save(id,blob){
  const db=await database();return new Promise((resolve,reject)=>{
   const tx=db.transaction('clips','readwrite');
   tx.objectStore('clips').put({id,blob,mime:blob.type||'audio/webm',savedAt:new Date().toISOString()});
-  tx.oncomplete=()=>{cacheTouched.add(id);clipCache.set(id,blob);invalidateSoundCheck(id);announceClipChange([id]);resolve()};tx.onerror=()=>reject(tx.error||Error('Storage failed'));tx.onabort=()=>reject(tx.error||Error('Save interrupted'));
+  tx.oncomplete=()=>{if(activeClipId===id)stopAudio();cacheTouched.add(id);clipCache.set(id,blob);invalidateSoundCheck(id);announceClipChange([id]);resolve()};tx.onerror=()=>reject(tx.error||Error('Storage failed'));tx.onabort=()=>reject(tx.error||Error('Save interrupted'));
  });
 }
 // All valid clips share one IndexedDB transaction, so a quota/storage error
@@ -107,6 +107,7 @@ async function saveImportedBatch(entries){
    for(const {id,blob} of entries)store.put({id,blob,mime:blob.type||'audio/webm',savedAt});
   }catch(e){try{tx.abort()}catch(_){}reject(e);return}
   tx.oncomplete=()=>{
+   if(activeClipId&&entries.some(entry=>entry.id===activeClipId))stopAudio();
    for(const {id,blob} of entries){cacheTouched.add(id);clipCache.set(id,blob);invalidateSoundCheck(id)}
    announceClipChange(entries.map(x=>x.id));resolve();
   };
