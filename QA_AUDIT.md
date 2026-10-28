@@ -1,5 +1,15 @@
 # CHamorU QA Audit
 
+## 2026-10-27 20:44 ET | Wait for IndexedDB read transaction commit (52-test CI)
+
+**CODE UPDATED + VERIFIED CI. Actual Android microphone/audio and fluent pronunciation remain unverified.**
+
+- Inspected main at `8951cbf8028c`, the 14-phrase Family Voice Studio, voice-cache warmup, recent aborted-read fix, and existing tests before editing. A request's `onsuccess` can fire **before** the containing IndexedDB transaction commits; `stored()` and `storedAll()` previously resolved at request success and could incorrectly report successful reads if the transaction then aborted.
+- Atomic source/test commit [`cb8b9577bc00`](https://github.com/clarenceandbridgettallen-ops/chamoru/commit/cb8b9577bc00b1dda59050bf64168e803aa26db0) now collects request results and resolves only on `tx.oncomplete`; `tx.onabort` and `tx.onerror` reject. The simulated IndexedDB harness now models read completion and a request-success-then-abort race. New regression checks that both read APIs reject and export reports the failure without changing saved clips. Existing phrase IDs, keys, Blob cache, consent, progress, XP and Next navigation were preserved.
+- **Tests:** 4/4 narrow local Node transaction-ordering checks passed before commit. GitHub Actions [run 40610578985](https://github.com/clarenceandbridgettallen-ops/chamoru/actions/runs/40610578985) completed **52 passed, 0 failed** across voice, phoneme and learner suites. GitHub Pages [run 40610578829](https://github.com/clarenceandbridgettallen-ops/chamoru/actions/runs/40610578829) completed **SUCCESS** for the code commit. This proves workflow success, **not** physical Samsung audio, live-browser playback, two-device transfer or language pronunciation.
+- **Next:** On a consenting real Android device, test microphone permission → Record → Stop & Save → Replay, then opt-in JSON export/import between two devices. Have a fluent CHamoru speaker approve pronunciation and disputed spellings before spoken proficiency claims. No private recordings uploaded or paid tools used.
+
+
 ## 2026-10-27 02:44 ET | Atomic family voice-pack import and CI
 
 **CODE UPDATED + 45/45 AUTOMATED TESTS PASSED. Physical Android audio remains unverified.**
