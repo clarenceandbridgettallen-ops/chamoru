@@ -9,13 +9,16 @@ const WORDS=[['hafa','Håfa adai!','Hello'],['thanks','Si Yu’os ma’åse’.'
  ['thanks-alt','Si Yu’us ma’åse’.','Thank you · existing dialogue variant, spelling pending fluent review'],
  ['welcome','Buen probechu.','You are welcome · dialogue, spelling pending fluent review']];
 const DB='chamoru-family-voice-v1',MAX=3*1024*1024;
-let dbPromise=null,rec=null,stream=null,parts=[],currentId=null,limitTimer=null,player=null,audioUrl=null,playSeq=0,micSeq=0,pendingMic=false,savingId=null,transferBusy=false,message='',audioTimer=null;
+let dbPromise=null,rec=null,stream=null,parts=[],currentId=null,limitTimer=null,player=null,activeClipId=null,audioUrl=null,playSeq=0,micSeq=0,pendingMic=false,savingId=null,transferBusy=false,message='',audioTimer=null;
 const clipCache=new Map(),cacheTouched=new Set();let cacheReady=false,cachePromise=null,cacheEpoch=0;
 // Cross-tab messages contain phrase IDs only, never private recordings.
 let voiceUpdates=null;
 function externalClipChange(ids){
  const valid=Array.isArray(ids)?ids.filter(id=>typeof id==='string'&&phrase(id)):[];
  if(!valid.length)return;
+ // A different tab may replace/delete a recording while its old Blob is still playing.
+ // Stop that audio before the stale onplaying callback can offer an audibility check.
+ if(activeClipId&&valid.includes(activeClipId))stopAudio();
  cacheEpoch++;cachePromise=null;cacheReady=false;
  for(const id of valid){clipCache.delete(id);cacheTouched.delete(id);invalidateSoundCheck(id)}
  warm().catch(()=>{});
@@ -138,7 +141,7 @@ function report(text,target='audioStatus'){
  else status(text);
 }
 function stopAudio(){
- playSeq++;
+ playSeq++;activeClipId=null;
  if(audioTimer){clearTimeout(audioTimer);audioTimer=null}
  if(player){try{player.pause();player.removeAttribute('src');player.load()}catch(e){}player=null}
  if(audioUrl){URL.revokeObjectURL(audioUrl);audioUrl=null}
@@ -153,7 +156,7 @@ function playCached(id,slow,target='voiceStudioStatus'){
  const item=clipCache.get(id);
  if(!item){report('No family recording for '+(phrase(id)?.[1]||'this phrase')+'. Open Family Voice Studio to record one.',target);return false}
  // This synchronous method is called directly from the click handler.
- stopAudio();const token=playSeq;
+ stopAudio();const token=playSeq;activeClipId=id;
  try{
   audioUrl=URL.createObjectURL(item);
   player=new Audio(audioUrl);player.volume=1;player.playbackRate=slow?.8:1;player.preload='auto';
