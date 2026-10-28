@@ -40,8 +40,8 @@ function harness(settings={}){
       };
       tx.abort=()=>{if(settled)return;settled=true;queueMicrotask(()=>tx.onabort?.())};
       tx.objectStore=()=>({
-        get(id){const q={};if(settings.abortRead){queueMicrotask(()=>tx.abort());return q}queueMicrotask(()=>{q.result=records.get(id);q.onsuccess?.()});return q},
-        getAll(){const q={},snapshot=[...records.values()];if(settings.abortRead){queueMicrotask(()=>tx.abort());return q}if(settings.deferFirstGetAll&&!settings._deferredGetAll){settings._deferredGetAll=()=>{q.result=snapshot;q.onsuccess?.()}}else queueMicrotask(()=>{q.result=snapshot;q.onsuccess?.()});return q},
+        get(id){const q={};if(settings.abortRead){queueMicrotask(()=>tx.abort());return q}queueMicrotask(()=>{q.result=records.get(id);q.onsuccess?.();if(settings.abortAfterRead)tx.abort();else complete()});return q},
+        getAll(){const q={},snapshot=[...records.values()];if(settings.abortRead){queueMicrotask(()=>tx.abort());return q}const deliver=()=>{q.result=snapshot;q.onsuccess?.();if(settings.abortAfterRead)tx.abort();else complete()};if(settings.deferFirstGetAll&&!settings._deferredGetAll){settings._deferredGetAll=deliver}else queueMicrotask(deliver);return q},
         put(value){if(value.id===settings.failPutOnId)throw Error('Synthetic storage quota failure');pending.push(value);complete()},
         delete(id){if(settings.abortDelete){queueMicrotask(()=>tx.abort());return}deletions.push(id);complete()}
       });
@@ -419,4 +419,17 @@ test('aborted IndexedDB reads settle and report export failure without changing 
   await h.c.CHVoice.exportAll();
   assert.match(h.nodes.get('voiceStudioStatus').textContent,/Export error: Read interrupted/);
   assert.equal(h.records.size,0,'No family recording may be changed by a failed read');
+});
+
+// An IndexedDB request can succeed before its transaction commits. A late
+// transaction abort must not report saved family audio as successfully read.
+test('request success followed by transaction abort rejects both voice reads',async()=>{
+ const h=harness({abortAfterRead:true});await h.tick();
+ for(const read of [()=>h.c.CHVoice.stored('hafa'),()=>h.c.CHVoice.storedAll()]){
+  const result=await Promise.race([read().then(()=> 'unexpected success',e=>e.message),new Promise(resolve=>setTimeout(()=>resolve('hung'),100))]);
+  assert.equal(result,'Read interrupted','Read must wait for transaction completion');
+ }
+ await h.c.CHVoice.exportAll();
+ assert.match(h.nodes.get('voiceStudioStatus').textContent,/Export error: Read interrupted/);
+ assert.equal(h.records.size,0,'Failed reads must never modify saved clips');
 });
