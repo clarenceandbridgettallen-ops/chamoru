@@ -17,7 +17,7 @@ test('app integrates recording studio and routes vocabulary through family voice
   assert.doesNotMatch(source,/\bfetch\s*\(|XMLHttpRequest|sendBeacon/);
 });
 function harness(settings={}){
-  const records=new Map(settings.initialRecords||[]),played=[],status=[],audio=[],timeouts=[],nodes=new Map(),deviceStorage=new Map();
+  const records=settings.sharedRecords||new Map(settings.initialRecords||[]),played=[],status=[],audio=[],timeouts=[],nodes=new Map(),deviceStorage=new Map();
   const elem=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',textContent:'',id});return nodes.get(id)};
   const db={
     objectStoreNames:{contains:()=>true},
@@ -63,7 +63,7 @@ function harness(settings={}){
   let tracksStopped=0;
   const getUserMedia=settings.getUserMedia|| (async()=>({getTracks:()=>[{stop:()=>tracksStopped++}]}));
   const c={console,Blob,Uint8Array,Promise,setTimeout,clearTimeout,
-    indexedDB,MediaRecorder:Recorder,Audio,
+    indexedDB,MediaRecorder:Recorder,Audio,BroadcastChannel:settings.BroadcastChannel,
     localStorage:{getItem:k=>deviceStorage.get(k)||null,setItem:(k,v)=>deviceStorage.set(k,v)},
     navigator:{mediaDevices:settings.noMic?null:{getUserMedia}},
     URL:{createObjectURL:blob=>{settings.createdBlobs?.push(blob);return 'blob:testing-'+audio.length},revokeObjectURL(){}},
@@ -432,4 +432,51 @@ test('request success followed by transaction abort rejects both voice reads',as
  await h.c.CHVoice.exportAll();
  assert.match(h.nodes.get('voiceStudioStatus').textContent,/Export error: Read interrupted/);
  assert.equal(h.records.size,0,'Failed reads must never modify saved clips');
+});
+
+// Two simulated VM tabs share IndexedDB but send only phrase IDs across the channel.
+// This does not test physical Android audio or browser codec behavior.
+test('other tab refreshes replaced and deleted private clips',async()=>{
+ const records=new Map(),channels=[],createdBlobs=[],messages=[];
+ class Channel{
+  constructor(name){this.name=name;channels.push(this)}
+  postMessage(data){messages.push(data);for(const other of channels)if(other!==this&&other.name===this.name)queueMicrotask(()=>other.onmessage?.({data}))}
+ }
+ const a=harness({sharedRecords:records,BroadcastChannel:Channel});
+ const b=harness({sharedRecords:records,BroadcastChannel:Channel,createdBlobs});
+ await a.tick();await b.tick();
+ const oldBlob=new Blob(['old'.repeat(80)],{type:'audio/webm'});
+ const newBlob=new Blob(['new'.repeat(80)],{type:'audio/webm'});
+ await a.c.CHVoice.save('hafa',oldBlob);await b.tick();
+ await b.c.CHVoice.warm();await b.tick();
+ assert.equal(b.c.CHVoice.playWord('Håfa adai!',null,false),true);
+ assert.equal(createdBlobs.at(-1),oldBlob);
+ await a.c.CHVoice.save('hafa',newBlob);await b.tick();
+ assert.equal(b.c.CHVoice.playWord('Håfa adai!',null,false),true);
+ assert.equal(createdBlobs.at(-1),newBlob,'Another tab must not replay an old recording');
+ await a.c.CHVoice.erase('hafa');await b.tick();
+ assert.equal(b.c.CHVoice.playWord('Håfa adai!',null,false),false,'Deleted clip must not survive in another tab');
+ assert.equal(records.has('hafa'),false);
+ assert.equal(channels.length,2);
+ assert.ok(messages.every(m=>m.type==='clips-changed'&&m.ids.every(id=>typeof id==='string')));
+ assert.ok(messages.every(m=>!JSON.stringify(m).includes('base64')),'No audio data may be broadcast');
+});
+
+test('old pending warmup cannot restore a clip replaced in another tab',async()=>{
+ const records=new Map(),channels=[];
+ class Channel{
+  constructor(name){this.name=name;channels.push(this)}
+  postMessage(data){for(const other of channels)if(other!==this&&other.name===this.name)queueMicrotask(()=>other.onmessage?.({data}))}
+ }
+ const oldBlob=new Blob(['old'.repeat(80)],{type:'audio/webm'});
+ const freshBlob=new Blob(['fresh'.repeat(80)],{type:'audio/webm'});
+ const a=harness({sharedRecords:records,BroadcastChannel:Channel});
+ await a.c.CHVoice.save('hafa',oldBlob);
+ const opts={sharedRecords:records,BroadcastChannel:Channel,deferFirstGetAll:true,createdBlobs:[]};
+ const b=harness(opts);await b.tick();
+ assert.equal(typeof opts._deferredGetAll,'function');
+ await a.c.CHVoice.save('hafa',freshBlob);await b.tick();
+ opts._deferredGetAll();await b.tick();
+ assert.equal(b.c.CHVoice.playWord('Håfa adai!',null,false),true);
+ assert.equal(opts.createdBlobs.at(-1),freshBlob,'Stale pending warmup must not replace new clip');
 });
