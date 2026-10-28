@@ -1,5 +1,14 @@
 # CHamorU QA Audit
 
+## 2026-10-28 13:48 ET | Same-tab audio replacement and import race
+
+**CODE UPDATED + SYNTHETIC PREFLIGHT TESTED; GitHub Actions and physical Android playback not yet verified.** Inspected public main, 14-phrase voice storage/playback source, 55-test history, and cross-tab playback protection before editing. Found a remaining local-tab race: replacing a clip through the public save API or importing a matching voice-pack entry could update the cached Blob while the previous Audio instance continued playing, permitting stale manual audibility feedback.
+
+- **Fix:** `voice-studio.js` commit `714913e018fc71b6d86a1013b67ce4c28c6a0619` stops only the active superseded phrase on successful same-tab IndexedDB save or batch import transaction commit, before refreshing cache and invalidating old sound feedback. Unrelated playback is not interrupted. Existing IndexedDB keys, 14 phrases, voice-pack format, private consent, learner mastery and Next navigation unchanged.
+- **Regression:** `scripts/test_voice_studio.js` commit `49a77de0b94449160c128b7cbd8ae790385e69d0` covers same-tab saved replacement, same-tab voice-pack import, stale playback confirmation, and replay of the imported replacement. Patched JavaScript syntax compiled successfully; 2/2 independent synthetic same-tab playback-stop preflight checks passed using a mocked browser/IndexedDB/Audio. The full GitHub Actions test suite is **pending verification**, not claimed passed.
+- **Remaining:** Real Android mic permission, Record → Stop & Save → audible Play, consenting two-device export/import, actual browser storage races, and fluent-speaker review of disputed CHamoru pronunciations. No private recordings were uploaded, no paid browser tooling or deployment was triggered.
+
+
 ## 2026-10-28 03:41–03:43 ET | Stop stale cross-tab audio already playing
 
 **CODE UPDATED + VERIFIED CI; physical Android audio remains unverified.** Inspected latest public main and 14-phrase Family Voice Studio, existing cross-tab cache refresh, source, test harness and QA history before editing. Found a source-level race: when another tab replaced or deleted a saved phrase, the receiving tab invalidated its cache but an existing Audio instance could keep playing the old Blob. A late `onplaying` event could offer a device-audibility confirmation for that superseded recording.
