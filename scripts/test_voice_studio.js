@@ -539,3 +539,33 @@ test('same-tab saved replacement and voice-pack import stop superseded audio bef
  assert.equal(h.c.CHVoice.replay('hafa'),true,'Imported replacement remains playable');
  assert.equal(h.played.length,3);
 });
+
+
+test('switching phrases clears a stale sound-check prompt until the next recording starts',async()=>{
+ const h=harness();h.c.voiceStudio();await h.tick();
+ const clip=new Blob(['sample'.repeat(80)],{type:'audio/webm'});
+ await h.c.CHVoice.save('hafa',clip);
+ await h.c.CHVoice.save('thanks',clip);
+ assert.equal(h.c.CHVoice.replay('hafa'),true);
+ assert.equal(h.nodes.get('voicePlaybackCheck').hidden,false);
+ // Simulate the next recording taking time to begin, as on a real phone.
+ const originalPlay=h.c.Audio.prototype.play;
+ h.c.Audio.prototype.play=function(){
+  const callback=this.onplaying;this.onplaying=null;
+  const result=originalPlay.call(this);this.onplaying=callback;
+  return result;
+ };
+ assert.equal(h.c.CHVoice.replay('thanks'),true);
+ assert.equal(h.nodes.get('voicePlaybackCheck').hidden,true,
+  'Old phrase confirmation must close before the next clip starts');
+ h.c.CHVoice.confirmSound(true);
+ assert.equal(h.deviceStorage.has('chamoru-device-audio-check-v1'),false,
+  'A pending second clip must not allow confirming the previous phrase');
+ h.played.at(-1).onplaying();
+ assert.equal(h.nodes.get('voicePlaybackWord').textContent,'Si Yu’os ma’åse’.');
+ assert.equal(h.nodes.get('voicePlaybackCheck').hidden,false);
+ h.c.CHVoice.confirmSound(true);
+ const checks=JSON.parse(h.deviceStorage.get('chamoru-device-audio-check-v1'));
+ assert.equal(checks.thanks.heard,true);
+ assert.equal(checks.hafa,undefined,'No false check for the previous phrase');
+});
