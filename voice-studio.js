@@ -157,6 +157,11 @@ function playCached(id,slow,target='voiceStudioStatus'){
  const item=clipCache.get(id);
  if(!item){report('No family recording for '+(phrase(id)?.[1]||'this phrase')+'. Open Family Voice Studio to record one.',target);return false}
  // This synchronous method is called directly from the click handler.
+ // Do not let a previous phrase's sound-check buttons remain actionable while
+ // a different recording is loading. Keep any previously stored check intact.
+ lastPlayedId=null;
+ const previousCheck=document.getElementById('voicePlaybackCheck');
+ if(previousCheck)previousCheck.hidden=true;
  stopAudio();const token=playSeq;activeClipId=id;
  try{
   audioUrl=URL.createObjectURL(item);
