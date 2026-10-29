@@ -1,5 +1,17 @@
 # CHamorU QA Audit
 
+
+## 2026-10-29 07:45 ET | Clear stale sound-check prompt when switching recorded phrases
+
+**CODE UPDATED + VERIFIED CI; GitHub Pages for this release pending at the time of audit. Physical Android audio and pronunciation still unverified.** Inspected main HEAD 13b8ff9 and the existing 14-phrase Family Voice Studio, IndexedDB cache, and 56-test suite before editing. Reproduced a real simulated UI race: while phrase B's Audio was waiting for \`onplaying\`, phrase A's previously visible "Yes I heard it" button remained clickable, allowing manual playback feedback to be attributed to the wrong phrase. This is device audibility feedback, never pronunciation mastery.
+
+- **Fix:** PR [#1](https://github.com/clarenceandbridgettallen-ops/chamoru/pull/1) squash-merged as [002b86a](https://github.com/clarenceandbridgettallen-ops/chamoru/commit/002b86a8774140e61ac1fa57c8e2f6da0401f117). \`voice-studio.js\` clears only the pending playback prompt and \`lastPlayedId\` before starting a different cached clip. Existing stored sound-check history, local recordings, IndexedDB keys, 14 phrases, XP/progress, reader, dialogue, Back/Next and privacy remain unchanged.
+- **Regression:** \`scripts/test_voice_studio.js\` simulates delayed \`onplaying\`; asserts old prompt closes, stale confirmation cannot be stored, new phrase opens its own prompt, and only that phrase receives manual feedback. Before the fix, isolated V8 mocks reproduced the stale prompt. Patched isolated V8 preflight passed.
+- **CI:** [PR workflow 40868140469](https://github.com/clarenceandbridgettallen-ops/chamoru/actions/runs/40868140469) and [main workflow 40868237836](https://github.com/clarenceandbridgettallen-ops/chamoru/actions/runs/40868237836) completed SUCCESS, **57 passed, 0 failed**. Raw main job log includes the new regression as test 57. Source and test readback on main verified.
+- **Deployment:** [Pages workflow 40868236949](https://github.com/clarenceandbridgettallen-ops/chamoru/actions/runs/40868236949) had not completed at this audit. Do not call this new fix live without deployment success and ideally independent served-source verification.
+- **Remaining:** Consenting physical Android microphone Record → Stop & Save → audible Replay; private two-device JSON transfer; real browser codec/IndexedDB behavior; fluent CHamoru pronunciation and ambiguous legacy spelling review. No private audio uploaded and no paid tooling used.
+
+
 ## 2026-10-28 13:55 ET | Same-tab voice playback fix CI and Pages confirmed
 
 **VERIFIED CI + SUCCESSFUL PAGES WORKFLOW; physical Android audio still unverified.** After source commit `714913e018fc71b6d86a1013b67ce4c28c6a0619`, test commit `49a77de0b94449160c128b7cbd8ae790385e69d0`, and prior audit commit `2974e780677487c6a22e1862c41a8672b52bf623`, read GitHub Actions runs and raw job logs:
