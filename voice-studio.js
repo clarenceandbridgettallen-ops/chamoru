@@ -210,11 +210,15 @@ async function start(id){
   stream=acquired;pendingMic=false;
   const types=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'];
   const mime=types.find(t=>MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t));
-  rec=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
-  rec.ondataavailable=e=>{if(e.data&&e.data.size)parts.push(e.data)};
-  rec.onerror=()=>{status('Microphone error. Try Chrome.');currentId=null;rec=null;clearMic();render()};
-  rec.onstop=async()=>{
-   const idToSave=currentId,type=rec&&rec.mimeType||mime||'audio/webm';
+  const recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
+  rec=recorder;
+  recorder.ondataavailable=e=>{if(rec===recorder&&e.data&&e.data.size)parts.push(e.data)};
+  recorder.onerror=()=>{if(rec!==recorder)return;status('Microphone error. Try Chrome.');currentId=null;rec=null;parts=[];clearMic();render()};
+  recorder.onstop=async()=>{
+   // A failed stop may fire a late event after another phrase starts.
+   // A superseded recorder must never save or clear the new recording.
+   if(rec!==recorder||currentId!==id)return;
+   const idToSave=id,type=recorder.mimeType||mime||'audio/webm';
    savingId=idToSave;currentId=null;rec=null;clearMic();
    const blob=new Blob(parts,{type});parts=[];
    if(!idToSave){savingId=null;status('Recording ended without saving.');render();return}
@@ -229,7 +233,7 @@ async function start(id){
  }catch(e){if(request!==micSeq)return;pendingMic=false;currentId=null;rec=null;clearMic();status('Microphone unavailable: '+(e.name||e.message)+'. Allow the microphone in Chrome settings.');render()}
 }
 function cancel(){if(!pendingMic)return;micSeq++;pendingMic=false;currentId=null;parts=[];status('Microphone request cancelled. Dismiss any browser permission prompt.');render()}
-function finish(){if(rec&&rec.state!=='inactive')try{rec.stop()}catch(e){status('Could not stop: '+e.message);currentId=null;clearMic()}}
+function finish(){if(rec&&rec.state!=='inactive')try{rec.stop()}catch(e){rec=null;currentId=null;pendingMic=false;parts=[];clearMic();status('Could not stop: '+e.message+'. Recording was not saved.');render()}}
 const asDataURL=blob=>new Promise((res,rej)=>{const reader=new FileReader();reader.onload=()=>res(reader.result);reader.onerror=()=>rej(Error('Cannot encode audio'));reader.readAsDataURL(blob)});
 async function exportAll(){
  if(transferBusy){status('Wait until the current voice-pack transfer finishes.');return}
