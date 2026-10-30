@@ -56,9 +56,12 @@ function harness(settings={}){
   }
   class Recorder{
     static isTypeSupported(){return true}
-    constructor(stream,opts){this.stream=stream;this.mimeType=opts?.mimeType||'audio/webm';this.state='inactive'}
+    constructor(stream,opts){this.stream=stream;this.mimeType=opts?.mimeType||'audio/webm';this.state='inactive';settings.recorders?.push(this)}
     start(){this.state='recording'}
-    stop(){this.state='inactive';this.ondataavailable?.({data:new Blob(['a'.repeat(128)],{type:'audio/webm'})});this.onstop?.()}
+    stop(){
+      if(settings.throwFirstStop&&!settings._firstStopThrown){settings._firstStopThrown=true;throw Error('synthetic stop failure')}
+      this.state='inactive';this.ondataavailable?.({data:new Blob(['a'.repeat(128)],{type:'audio/webm'})});this.onstop?.()
+    }
   }
   let tracksStopped=0;
   const getUserMedia=settings.getUserMedia|| (async()=>({getTracks:()=>[{stop:()=>tracksStopped++}]}));
@@ -568,4 +571,26 @@ test('switching phrases clears a stale sound-check prompt until the next recordi
  const checks=JSON.parse(h.deviceStorage.get('chamoru-device-audio-check-v1'));
  assert.equal(checks.thanks.heard,true);
  assert.equal(checks.hafa,undefined,'No false check for the previous phrase');
+});
+
+
+test('late recorder callbacks after a failed stop cannot corrupt the next phrase',async()=>{
+ const settings={recorders:[],throwFirstStop:true};
+ const h=harness(settings);h.c.voiceStudio();await h.tick();
+ await h.c.CHVoice.start('hafa');await h.tick();
+ assert.equal(settings.recorders.length,1);
+ h.c.CHVoice.finish();
+ assert.match(h.nodes.get('voiceStudioStatus').textContent,/Recording was not saved/);
+ await h.c.CHVoice.start('thanks');await h.tick();
+ assert.equal(settings.recorders.length,2,'A new recording must be allowed after the failed stop');
+ const stale=settings.recorders[0];
+ stale.ondataavailable?.({data:new Blob(['stale'.repeat(40)],{type:'audio/webm'})});
+ await stale.onstop?.();await h.tick();
+ assert.equal(h.records.size,0,'The stale callback must never save to the new phrase');
+ assert.match(h.nodes.get('voiceStudioList').innerHTML,/Stop & Save/,'The new recorder must remain active');
+ h.c.CHVoice.finish();await h.tick();
+ assert.equal(h.records.has('hafa'),false);
+ assert.equal(h.records.has('thanks'),true);
+ assert.equal(await h.records.get('thanks').blob.text(),'a'.repeat(128),
+   'Old recorder data must not contaminate the new recording');
 });
