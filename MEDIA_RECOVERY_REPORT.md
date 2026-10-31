@@ -92,3 +92,7 @@ New offline Python-standard-library `scripts/check_voice_wav.py` plus `scripts/t
 ### 2026-10-31 03:44 ET follow-up: candidate tail-silence measurement, no media recovery
 
 An independent local PCM inspection of the existing *unreviewed* 2.051-s English-eSpeak experimental WAV found 22,050-Hz mono audio, 0% clipped samples, peak amplitude ~0.902 full scale, and approximately 0.559 s (27.3%) of trailing samples below -46 dBFS. This does not validate spoken-word audibility on Android, intelligibility, CHamoru pronunciation, licensing or rights to distribute the engine output. The original 2026-10-11 audio ZIPs and 55.6-MB mostly silent WAV remain unrecovered. No recording was uploaded or published. Separate 16-pair greetings curriculum draft is explicitly not live and has no approved audio; see QA_AUDIT.md.
+
+
+### 2026-10-31 11:44 ET | Rights-aware neural voice research lead, no recovered audio
+Official Kokoro-82M model card (https://huggingface.co/hexgrad/Kokoro-82M) labels its 82M open weights Apache-2.0, but lists **no CHamoru support**. Candidate only for a possible free local waveform engine after independent review of voice-pack, dependency, phonemizer and output terms. No model downloaded/run, no CHamoru speech synthesized or approved, no audio licensed/copied/published, no phone listening performed. The original Oct 11 ZIPs and mostly-silent 55.6 MB WAV remain unrecovered. See QA_AUDIT.md for validation gates.
