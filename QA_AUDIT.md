@@ -471,3 +471,14 @@
 **FRESH OFFLINE AUDIO RECHECK:** Existing *unreviewed* 2.051-second, 22,050-Hz mono English-eSpeak WAV measured -16.43 dBFS RMS, 0.902 peak, zero clipped samples and ~0.559 seconds of trailing samples below -46 dBFS. It is not CHamoru pronunciation evidence or cleared for redistribution. Original v0.3/v0.4 ZIPs and 55.6-MB mostly-silent historical WAV remain unrecovered.
 
 **NEXT:** Verify Pages completion/served bytes; qualified fluent review of 16 written phrases; develop original rights-cleared CHamoru synthesis and validate real Android playback/listener intelligibility before activating audio. No private family recording or learner data accessed. No paid service or browser charge.
+
+
+## 2026-10-31 10:44 ET | Draft safety and Pages outcome
+
+**READ FIRST:** Reviewed MEDIA_RECOVERY_REPORT.md and this QA_AUDIT.md before current checks. Main HEAD before audit 0a27beb2e6e377e29929f39aaafdfd64d178f4c3. Current index blob bac1d1ca010625ebf6cafec4d37562cf865ea7c4 retains Culture & Audio Library v4.7; no learner UI, progress, mastery, culture discovery, reader, games or audio changes made this pass.
+
+**TESTED ONLY:** Exact current curriculum/drafts/greetings_recall_v1.json blob 0bc62d0769d86bbf2fac7eff346d9c9ab2ca618f passed 7/7 independent data checks: draft remains nonpublishable, no approved audio/pronunciation, 16 normalized-unique CHamoru entries, valid source keys, no phrase-level media URLs, preserved progress/mastery/culture flags, and three written recall modes. Incomplete template 'Na'an hu si' remains pending fluent review. These are static draft safety assertions, NOT fluent-language or spoken-word tests.
+
+**DEPLOYMENT EVIDENCE:** GitHub Pages run 41206958406 completed SUCCESS for prior main HEAD 0a27beb2e6e377e29929f39aaafdfd64d178f4c3; build/deploy/report jobs succeeded. The earlier code-only run 41206891744 was CANCELLED by the later workflow. No independent served-byte read or actual Android audio listening was possible in this runtime. No new app media published. Historical v0.3/v0.4 ZIPs and old 55.6 MB WAV remain unrecovered.
+
+**NEXT:** Fluent orthography/usage review of 16 draft entries, original commercially permitted synthesized CHamoru voice candidate, measurable signal/codec verification and real Android audibility before pronunciation approval. No external recordings copied or licensed by assumption.
