@@ -17,7 +17,8 @@ function assertDraft(draft) {
   for (const p of draft.phrases) {
     if (typeof p.chamoru !== 'string' || !p.chamoru.trim() ||
         typeof p.english !== 'string' || !p.english.trim() ||
-        typeof p.source !== 'string' || !draft.sources || !draft.sources[p.source]) {
+        typeof p.source !== 'string' || !draft.sources ||
+        !Object.hasOwn(draft.sources, p.source) || !draft.sources[p.source]) {
       throw new Error('Invalid phrase or missing source attribution');
     }
     const id = p.chamoru.normalize('NFC').toLocaleLowerCase('en');
