@@ -87,3 +87,8 @@ New offline Python-standard-library `scripts/check_voice_wav.py` plus `scripts/t
 **NEXT:** Measure MP3/Opus round-trip of this actual synthetic speech with existing check_encoded_voice.py; compare with a fluent speaker's CHamoru phonology review (2024 Kumisión orthography and Sandra Chung's grammar are research references, not licenses for copying media); design a CHamoru-specific phoneme mapping/model with verified distribution terms, then test audible Android playback and listener intelligibility before any app integration.
 
 **02:48 ET follow-up (local codec signal only):** The same unreviewed eSpeak candidate was converted offline using local FFmpeg to MP3 and Opus and decoded to 16-kHz mono PCM for comparison. Decoded durations: WAV 2.051 s, MP3 2.051 s, Opus 2.051 s; RMS: WAV -16.43 dBFS, MP3 -16.43 dBFS, Opus -16.60 dBFS. This shows preserved measured signal, NOT intelligible or culturally accurate speech, phone playback, or cleared output licensing. No candidate audio published or uploaded.
+
+
+### 2026-10-31 03:44 ET follow-up: candidate tail-silence measurement, no media recovery
+
+An independent local PCM inspection of the existing *unreviewed* 2.051-s English-eSpeak experimental WAV found 22,050-Hz mono audio, 0% clipped samples, peak amplitude ~0.902 full scale, and approximately 0.559 s (27.3%) of trailing samples below -46 dBFS. This does not validate spoken-word audibility on Android, intelligibility, CHamoru pronunciation, licensing or rights to distribute the engine output. The original 2026-10-11 audio ZIPs and 55.6-MB mostly silent WAV remain unrecovered. No recording was uploaded or published. Separate 16-pair greetings curriculum draft is explicitly not live and has no approved audio; see QA_AUDIT.md.
