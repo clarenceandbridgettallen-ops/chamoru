@@ -434,3 +434,14 @@
 - Previous Pages run `41178070747` succeeded for audit-only HEAD `fd19b432` at 2026-10-31 06:48 UTC, **before** these new draft commits. No claim that the draft is served, playable, reviewed, or integrated.
 
 **NEXT:** Fluent CHamoru reviewer approves/edits draft spellings and meanings; implement gated written recall only after review; separately investigate a legally redistributable CHamoru-specific synthesis engine and test actual Android sound with consent. Never substitute an English phonetic approximation for a certified CHamoru voice.
+
+
+## 2026-10-31 04:44 ET | Offline written-recall preview engine, NOT LIVE
+
+**CODE UPDATED + TESTED ONLY.** Before modifying, read MEDIA_RECOVERY_REPORT.md and this QA audit, inspected main HEAD, the unapproved 16-phrase greetings draft, and the latest Pages workflow. Source and learner UI were preserved. No fluent approval, new published lesson, recorded voice, private audio upload, Android playback, or student progress change.
+
+- Added `scripts/draft_recall_preview.js` in commit `5ae68343dc01de858547e74de53ece4905318822` and `scripts/test_draft_recall_preview.js` in commit `2b8d3810b9af2530fb48bec79acb86fda640beb0`, both [skip ci]. Existing draft `curriculum/drafts/greetings_recall_v1.json` is unchanged and explicitly unapproved.
+- Preview deterministically shuffles the 16 reviewed-as-draft phrase pairs into 48 written prompts: 16 four-choice meaning recognition, 16 typed English meanings and 16 typed CHamoru recalls. It refuses duplicate or ambiguous meanings, invalid seeds, missing source references and any draft marked approved or claiming spoken approval. It has no scoring, answer-key fields, browser storage, audio, network or app imports.
+- **Fresh tests:** local Node test runner 7/7 passed, CLI `--review-only` emitted 48 questions and `graded:false` / `progress_written:false`; invoking without the flag returned exit code 2. Exact GitHub source/test blob SHAs `9473209e8283f2942a7a37072231cc49edbc899e` and `911d743db9cb85619c9c986f7da8e89e82bf0b7e` match the locally tested files. Additional 7/7 isolated assertions passed against the exact GitHub draft and source. This is **not** browser, Android, linguistic or curriculum approval.
+- Latest inspected Pages workflow `41182226977` succeeded at HEAD `f0591931fb7b553f7e26c38a2964b69c4c334eac` **before** these new code commits. No claim that new preview is deployed or usable by learners. Old games, rewards, culture links, voice recordings and progress remain untouched.
+- **NEXT:** fluent reviewer confirms exact phrases, register, spelling and meaning before any gated live lessons; continue rights-cleared original CHamoru synthesis with signal, intelligibility and physical Android tests. Historical ZIPs and old WAV remain unrecovered. Never equate a beep or signal metric with spoken CHamoru accuracy.
