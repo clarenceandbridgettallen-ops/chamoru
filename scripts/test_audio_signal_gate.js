@@ -16,7 +16,10 @@ const checks=[
  ['malformed header rejected',()=>assert.throws(()=>analyzePcm16Wav(Buffer.alloc(44)))],
  ['truncated chunk rejected',()=>{let b=wav();b.writeUInt32LE(999999,40);assert.throws(()=>analyzePcm16Wav(b));}],
  ['unsupported sample format rejected',()=>{let b=wav();b.writeUInt16LE(3,20);assert.throws(()=>analyzePcm16Wav(b));}],
- ['zero frames rejected',()=>{let b=wav({seconds:0});assert.throws(()=>analyzePcm16Wav(b));}]
+ ['zero frames rejected',()=>{let b=wav({seconds:0});assert.throws(()=>analyzePcm16Wav(b));}],
+ ['DC-only signal rejected as non-audible',()=>{let b=wav();for(let i=44;i<b.length;i+=2)b.writeInt16LE(12000,i);let r=analyzePcm16Wav(b);assert.equal(r.signalGatePass,false);assert.ok(r.reasons.includes('signal-too-quiet'));assert.ok(r.rmsDbfs>-20);assert.equal(r.acRmsDbfs,-Infinity);}],
+ ['opposite stereo DC rejected',()=>{let b=wav({channels:2});for(let i=44;i<b.length;i+=4){b.writeInt16LE(12000,i);b.writeInt16LE(-12000,i+2);}assert.ok(analyzePcm16Wav(b).reasons.includes('signal-too-quiet'));}],
+ ['RIFF length mismatch rejected',()=>{let b=wav();b.writeUInt32LE(20,4);assert.throws(()=>analyzePcm16Wav(b),/RIFF size/);}]
 ];
 for(const [name,fn] of checks){fn();console.log('PASS',name)}
 console.log(checks.length+'/'+checks.length+' local signal tests passed');
