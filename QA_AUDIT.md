@@ -458,3 +458,16 @@
 **RESEARCH NOTE:** eSpeak NG's official repository states GPL-3.0-or-later for the engine; Piper runtime and individual model/data licenses must be evaluated separately. Neither an experimental waveform nor a permissive repository tag alone grants approval for a commercially distributed CHamoru voice. Do not publish the English-phonetic placeholder.
 
 **NEXT:** Give the review-only 16-entry packet to a qualified fluent reviewer, resolve incomplete-template/spelling/meaning/register questions, then independently validate a rights-cleared original CHamoru phonology-based voice on actual Android hardware before releasing spoken lessons.
+
+
+## 2026-10-31 09:44 ET | v4.7 visible-version alignment (CODE UPDATED; deployment pending)
+
+**READ FIRST:** MEDIA_RECOVERY_REPORT.md and QA_AUDIT.md were inspected before the change; source main was 1cf17bca46ed046374d79d161cedb77774fd382d. Founder-approved v4.7 seven-link Culture & Audio Library, games, reading preview, learner storage, mastery gates, saved progress, rewards and navigation remain intact.
+
+**VERIFIED SOURCE CHANGE:** The public index had an inconsistent hero pill 'MASTERY JOURNEY · v4.6' although its title was already v4.7. Changed ONLY that one literal to 'MASTERY JOURNEY · v4.7' in commit fc440afbf57e9953d5e0e5bf212ec7a208beb714 ([skip ci]); original index blob ee8fdc2d2d91ce181ad09a74f42f1431adb81b55, new blob bac1d1ca010625ebf6cafec4d37562cf865ea7c4. In-memory pre-write checks proved exact single-label substitution, unchanged byte count, and preserved storage/reader/games/mastery/navigation markers. GitHub readback verified the new label, all seven externally attributed source URLs, five existing navigation markers and the original storage key. This is a text consistency fix, NOT a new lesson or original voice.
+
+**DEPLOYMENT:** GitHub Pages run 41206891744 for the new commit was IN PROGRESS when inspected. No claim of live served bytes, phone/browser UI or audio. Latest prior Pages run 41190126227 for older 1cf17bca succeeded. No third-party recordings/videos copied or published.
+
+**FRESH OFFLINE AUDIO RECHECK:** Existing *unreviewed* 2.051-second, 22,050-Hz mono English-eSpeak WAV measured -16.43 dBFS RMS, 0.902 peak, zero clipped samples and ~0.559 seconds of trailing samples below -46 dBFS. It is not CHamoru pronunciation evidence or cleared for redistribution. Original v0.3/v0.4 ZIPs and 55.6-MB mostly-silent historical WAV remain unrecovered.
+
+**NEXT:** Verify Pages completion/served bytes; qualified fluent review of 16 written phrases; develop original rights-cleared CHamoru synthesis and validate real Android playback/listener intelligibility before activating audio. No private family recording or learner data accessed. No paid service or browser charge.
