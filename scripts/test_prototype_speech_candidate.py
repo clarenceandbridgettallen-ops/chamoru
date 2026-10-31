@@ -89,7 +89,6 @@ def test_rejects_short_wav(tmp_path):
         c.generate(tmp_path/'candidate.wav', runner=short)
 
 
-
 def test_rejects_constant_dc_without_ac_signal(tmp_path):
     import array
     def dc_only(args, **kwargs):
