@@ -57,7 +57,8 @@ def _inspect(path):
 def _pcm_metrics(path):
     raw = _run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-nostdin',
                 '-protocol_whitelist', 'file,pipe', '-i', str(path), '-map', '0:a:0',
-                '-ac', '1', '-ar', '16000', '-f', 's16le', 'pipe:1'])
+                '-ac', '1', '-ar', '16000', '-t', '31', '-fs',
+                str(MAX_DECODE_BYTES + 1), '-f', 's16le', 'pipe:1'])
     if not raw or len(raw) % 2 or len(raw) > MAX_DECODE_BYTES:
         raise ValueError('Invalid or excessive decoded PCM')
     samples = array.array('h')
