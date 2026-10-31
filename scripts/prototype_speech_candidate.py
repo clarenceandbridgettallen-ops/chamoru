@@ -36,13 +36,19 @@ def inspect_signal(path):
             samples.byteswap()
         if len(samples) != frames:
             raise ValueError('Truncated synthesized WAV')
+        # Raw RMS alone can approve a constant DC offset with no audible AC signal.
+        # Keep the raw level for diagnostics, but gate on the DC-removed waveform.
+        mean = sum(samples) / len(samples)
         rms = math.sqrt(sum(v*v for v in samples) / len(samples)) / 32768
+        ac_rms = math.sqrt(sum((v-mean)**2 for v in samples) / len(samples)) / 32768
         dbfs = round(20 * math.log10(max(rms, 1 / 32768)), 2)
-        if dbfs < -38:
-            raise ValueError('Synthesized speech candidate is too quiet')
+        ac_dbfs = round(20 * math.log10(max(ac_rms, 1 / 32768)), 2)
+        if ac_dbfs < -38:
+            raise ValueError('Synthesized speech candidate is too quiet or DC-only')
         return {'status': 'SPEECH_SIGNAL_ONLY_PRONUNCIATION_UNVERIFIED',
                 'duration_seconds': round(frames / rate, 3),
                 'sample_rate_hz': rate, 'rms_dbfs': dbfs,
+                'ac_rms_dbfs': ac_dbfs,
                 'engine': 'independent local espeak (GPL terms require review)',
                 'language_review': 'NOT REVIEWED',
                 'android_playback': 'NOT TESTED'}
