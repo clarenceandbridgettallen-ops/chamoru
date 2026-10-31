@@ -482,3 +482,12 @@
 **DEPLOYMENT EVIDENCE:** GitHub Pages run 41206958406 completed SUCCESS for prior main HEAD 0a27beb2e6e377e29929f39aaafdfd64d178f4c3; build/deploy/report jobs succeeded. The earlier code-only run 41206891744 was CANCELLED by the later workflow. No independent served-byte read or actual Android audio listening was possible in this runtime. No new app media published. Historical v0.3/v0.4 ZIPs and old 55.6 MB WAV remain unrecovered.
 
 **NEXT:** Fluent orthography/usage review of 16 draft entries, original commercially permitted synthesized CHamoru voice candidate, measurable signal/codec verification and real Android audibility before pronunciation approval. No external recordings copied or licensed by assumption.
+
+
+## 2026-10-31 11:44 ET | Original voice engine licensing candidate (RESEARCH ONLY)
+
+**READ FIRST:** MEDIA_RECOVERY_REPORT.md and QA_AUDIT.md reviewed before this entry. Public index.html blob bac1d1ca010625ebf6cafec4d37562cf865ea7c4 unchanged; v4.7 seven-source discovery, reader, games, Back/Next, saved progress, mastery and Family Voice Studio preserved. Latest Pages run 41211549937 completed SUCCESS on prior HEAD 308d762d; actual served bytes and Android word playback not independently tested.
+
+**NEW SOURCE-VERIFIED RESEARCH LEAD, NOT IMPLEMENTATION:** Official upstream model card https://huggingface.co/hexgrad/Kokoro-82M lists Kokoro-82M open weights as Apache-2.0 and 82 million parameters, with preset voices in eight languages, **not CHamoru**. It may be a free local neural waveform backend to evaluate, unlike relying on device TTS, but model-card licensing alone does not clear all runtime dependencies, phonemizers, voice packs, output provenance or commercial distribution obligations. No weights downloaded, runtime executed, sound produced, speaker cloned, CHamoru phoneme mapping approved or Android audio tested in this run. No trial, API bill or third-party recording used. Do not substitute preset English/Spanish voices for an authentic CHamoru voice.
+
+**NEXT GATE:** Document verified official orthography-to-phoneme rules, select a fully rights-audited local backend/voice pack, produce *original* experimental PCM, measure real speech signal and codecs, and obtain fluent-speaker pronunciation/intelligibility review plus actual Android playback before learner use. Prior English eSpeak candidate remains unapproved; Oct 11 v0.3/v0.4 ZIPs and mostly-silent 55.6 MB WAV remain unrecovered.
