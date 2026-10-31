@@ -60,3 +60,8 @@ CHamorU gained lesson UX, mastery gates, reading previews, games, automated QA a
 - [Existing detailed technical QA](./QA_AUDIT.md)
 
 **Bottom line:** Most "missing" content was either an earlier separate prototype, external research not imported into the published app, or existing code obscured by a gated UI. The fix is to recover and reintroduce assets with provenance and rights while restoring discovery and the original custom-voice roadmap, not to keep shipping invisible audio patches.
+
+
+## 2026-10-31 00:44 ET | New signal-measurement prerequisite (no recovered audio)
+
+New offline Python-standard-library `scripts/check_voice_wav.py` plus `scripts/test_check_voice_wav.py` committed at `c1edd92c` and `b70941f`. 11/11 synthetic WAV tests passed locally, exact committed blob hashes verified. The analyzer reports signal RMS, peak, silence fraction, clipping and DC offset, rejecting silent/mostly silent test signals. This creates a reproducible gate for future original speech candidates and the historical mostly-silent WAV **if its bytes are recovered**. It does not synthesize a voice, detect intelligible words, approve CHamoru pronunciation, test Android playback, or grant commercial media rights. Old v0.3/v0.4 ZIPs and v1.3 WAV remain unrecovered. Seven v4.7 attributed external discovery links and original learner experience preserved. No private audio uploaded or media published.
