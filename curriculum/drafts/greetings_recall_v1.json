@@ -1,0 +1,112 @@
+{
+  "schema": "chamoru-curriculum-draft-v1",
+  "id": "greetings-meaning-recall-v1",
+  "status": "DRAFT_NOT_LIVE_FLUENT_REVIEW_REQUIRED",
+  "publish_approved": false,
+  "audio_status": "NO_APPROVED_SPOKEN_AUDIO",
+  "pronunciation_status": "NOT_REVIEWED",
+  "preserve": [
+    "saved_progress",
+    "xp",
+    "shells",
+    "mastery_gates",
+    "games",
+    "reader",
+    "culture_library",
+    "back_next"
+  ],
+  "source_notes": "Short phrase meanings paraphrased from Guam Visitors Bureau resources; spellings and dialect/usage still need fluent review. No third-party media copied. These are original recall prompts, not a licensed audio corpus.",
+  "sources": {
+    "greetings": "https://www.visitguam.com/chamorro-culture/simple-chamorro-greetings/",
+    "travel": "https://www.visitguam.com/planning/traveler-essentials/language-and-currency/",
+    "orthography_reference": "https://kumisionchamoru.guam.gov/chamorro-grammar-as-dr-sandra-chung/"
+  },
+  "lesson_flow": [
+    "meaning_recognition",
+    "typed_english_meaning",
+    "typed_chamoru_recall"
+  ],
+  "review_policy": "No graded release, sound gate, or pronunciation scoring until a fluent reviewer signs off on exact spelling, meaning, variants, and register. Written prompts may later be assessed separately from audio.",
+  "phrases": [
+    {
+      "chamoru": "Håfa adai",
+      "english": "hello",
+      "source": "travel"
+    },
+    {
+      "chamoru": "Håfa lai",
+      "english": "hello, friend",
+      "source": "travel"
+    },
+    {
+      "chamoru": "Håfa?",
+      "english": "what's up?",
+      "source": "travel"
+    },
+    {
+      "chamoru": "Håfa tatatmanu hao?",
+      "english": "how are you?",
+      "source": "travel"
+    },
+    {
+      "chamoru": "Hayi na'ån-mu?",
+      "english": "what's your name?",
+      "source": "travel"
+    },
+    {
+      "chamoru": "Na'an hu si",
+      "english": "my name is...",
+      "source": "greetings"
+    },
+    {
+      "chamoru": "Si Yu'os Ma'åse'",
+      "english": "thank you",
+      "source": "greetings"
+    },
+    {
+      "chamoru": "Despensa yu'",
+      "english": "excuse me; I'm sorry",
+      "source": "greetings"
+    },
+    {
+      "chamoru": "Hunggan",
+      "english": "yes",
+      "source": "greetings"
+    },
+    {
+      "chamoru": "Åhe'",
+      "english": "no",
+      "source": "greetings"
+    },
+    {
+      "chamoru": "Adios",
+      "english": "goodbye",
+      "source": "greetings"
+    },
+    {
+      "chamoru": "Esta agupa'",
+      "english": "until tomorrow",
+      "source": "travel"
+    },
+    {
+      "chamoru": "Gof mauleg",
+      "english": "very good",
+      "source": "travel"
+    },
+    {
+      "chamoru": "Buenas dihas",
+      "english": "good morning",
+      "source": "travel"
+    },
+    {
+      "chamoru": "Ha'anen Maolek",
+      "english": "good afternoon",
+      "source": "greetings"
+    },
+    {
+      "chamoru": "Pue'ngen Maolek",
+      "english": "good evening",
+      "source": "greetings"
+    }
+  ]
+}
