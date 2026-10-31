@@ -48,3 +48,13 @@ test('invalid seed fails closed', () => {
   assert.throws(() => makePreview(draft, -1), /seed/);
   assert.throws(() => makePreview(draft, 1.5), /seed/);
 });
+
+// Object.prototype has inherited keys; none of them are valid source citations.
+test('rejects inherited source names instead of treating them as citations', () => {
+  for (const inherited of ['toString', 'constructor', '__proto__']) {
+    const copy = JSON.parse(JSON.stringify(draft));
+    copy.phrases[0].source = inherited;
+    assert.throws(() => assertDraft(copy), /source attribution/, inherited);
+    assert.throws(() => makePreview(copy, 5), /source attribution/, inherited);
+  }
+});
