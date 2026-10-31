@@ -89,6 +89,39 @@ def test_rejects_short_wav(tmp_path):
         c.generate(tmp_path/'candidate.wav', runner=short)
 
 
+
+def test_rejects_constant_dc_without_ac_signal(tmp_path):
+    import array
+    def dc_only(args, **kwargs):
+        with wave.open(args[args.index('-w')+1], 'wb') as w:
+            w.setnchannels(1); w.setsampwidth(2); w.setframerate(22050)
+            w.writeframes(array.array('h', [12000] * 22050).tobytes())
+        return subprocess.CompletedProcess(args, 0)
+    with pytest.raises(ValueError, match='DC-only'):
+        c.generate(tmp_path/'candidate.wav', runner=dc_only)
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_rejects_very_quiet_ac_over_large_dc_offset(tmp_path):
+    import array
+    def dc_with_tiny_ac(args, **kwargs):
+        with wave.open(args[args.index('-w')+1], 'wb') as w:
+            w.setnchannels(1); w.setsampwidth(2); w.setframerate(22050)
+            w.writeframes(array.array('h', [12000 + (i % 2) for i in range(22050)]).tobytes())
+        return subprocess.CompletedProcess(args, 0)
+    with pytest.raises(ValueError, match='DC-only'):
+        c.generate(tmp_path/'candidate.wav', runner=dc_with_tiny_ac)
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_real_ac_signal_retains_explicit_unreviewed_metrics(tmp_path):
+    out = tmp_path/'candidate.wav'
+    stats = c.generate(out, runner=fake_runner)
+    assert stats['ac_rms_dbfs'] > -38
+    assert stats['ac_rms_dbfs'] <= stats['rms_dbfs'] + 0.01
+    assert stats['language_review'] == 'NOT REVIEWED'
+
+
 @pytest.mark.skipif(shutil.which('espeak') is None, reason='independent local eSpeak absent')
 def test_real_offline_espeak_signal(tmp_path):
     stats = c.generate(tmp_path/'candidate.wav')
