@@ -58,3 +58,17 @@ test('rejects inherited source names instead of treating them as citations', () 
     assert.throws(() => makePreview(copy, 5), /source attribution/, inherited);
   }
 });
+
+// A reviewer can accidentally add leading/trailing spaces; those are not distinct words.
+test('rejects whitespace, case and Unicode-equivalent CHamoru duplicates', () => {
+  for (const variant of [
+    `  ${draft.phrases[0].chamoru}  `,
+    draft.phrases[0].chamoru.toLocaleUpperCase('en'),
+    `  ${draft.phrases[0].chamoru.normalize('NFD')}  `,
+  ]) {
+    const copy = JSON.parse(JSON.stringify(draft));
+    copy.phrases[1].chamoru = variant;
+    assert.throws(() => assertDraft(copy), /Duplicate phrase/);
+    assert.throws(() => makePreview(copy), /Duplicate phrase/);
+  }
+});
