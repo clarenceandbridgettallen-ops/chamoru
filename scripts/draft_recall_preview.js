@@ -21,7 +21,7 @@ function assertDraft(draft) {
         !Object.hasOwn(draft.sources, p.source) || !draft.sources[p.source]) {
       throw new Error('Invalid phrase or missing source attribution');
     }
-    const id = p.chamoru.normalize('NFC').toLocaleLowerCase('en');
+    const id = p.chamoru.trim().normalize('NFC').toLocaleLowerCase('en');
     if (seen.has(id)) throw new Error('Duplicate phrase');
     seen.add(id);
     const meaning = p.english.trim().normalize('NFC').toLocaleLowerCase('en');
