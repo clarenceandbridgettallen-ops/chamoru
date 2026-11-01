@@ -43,6 +43,26 @@ class FormantSignalTests(unittest.TestCase):
                 self.assertGreater(max(vals), 1000)
             self.assertEqual(report['status'], 'EXPERIMENTAL_SIGNAL_NOT_PRONUNCIATION')
 
+    def test_existing_file_is_not_overwritten(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'keep.wav'
+            path.write_bytes(b'KEEP_ORIGINAL')
+            with self.assertRaises(FileExistsError):
+                write_demo_wav(path)
+            self.assertEqual(path.read_bytes(), b'KEEP_ORIGINAL')
+
+    def test_existing_symlink_target_is_not_modified(self):
+        with tempfile.TemporaryDirectory() as folder:
+            target = Path(folder) / 'private.wav'
+            target.write_bytes(b'KEEP_PRIVATE')
+            link = Path(folder) / 'signal.wav'
+            link.symlink_to(target)
+            with self.assertRaises(FileExistsError):
+                write_demo_wav(link)
+            self.assertEqual(target.read_bytes(), b'KEEP_PRIVATE')
+            self.assertTrue(link.is_symlink())
+
+
 
 if __name__ == '__main__':
     unittest.main()
