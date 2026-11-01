@@ -13,11 +13,27 @@ test('apostrophes are not silently removed',()=>{
   assert.equal(x.units.filter(u=>u.kind==='glottal-candidate').length,3);
   assert.equal(x.fluentReviewRequired,true);
 });
-test('vowels, stress and dialect remain explicitly unmapped',()=>{
-  const x=planSpeechUnits('Håfa ǻ');
-  assert.equal(x.units.find(u=>u.glyph==='å').kind,'unmapped-letter');
-  assert.equal(x.units.find(u=>u.glyph==='ǻ').kind,'unmapped-letter');
+test('six written vowel classes have provisional IPA candidates, not approved sounds',()=>{
+  const x=planSpeechUnits('a å e i o u');
+  assert.deepEqual(x.units.filter(u=>u.kind!=='separator').map(u=>u.candidateIpa),
+    ['a','ɒ','e','i','o','u']);
+  assert.ok(x.units.filter(u=>u.kind!=='separator').every(u=>u.kind==='provisional-phoneme'&&u.needsReview));
+  assert.equal(x.unresolved,6);
+  assert.equal(x.readyForSynthesis,false);
   assert.equal(x.audioGenerated,false);
+  assert.equal(x.publishApproved,false);
+});
+test('accented and decomposed vowels remain review-only; no stress or syllable realization inferred',()=>{
+  const x=planSpeechUnits('Håfa ǻ á é í ó ú a\u030a');
+  assert.equal(x.units.find(u=>u.glyph==='å').candidateIpa,'ɒ');
+  assert.equal(x.units.find(u=>u.glyph==='ǻ').candidateIpa,'ɒ');
+  assert.deepEqual(x.units.filter(u=>['á','é','í','ó','ú'].includes(u.glyph)).map(u=>u.candidateIpa),
+    ['a','e','i','o','u']);
+  assert.equal(x.units[x.units.length-1].glyph,'å');
+  assert.equal(x.units[x.units.length-1].candidateIpa,'ɒ');
+  assert.equal(x.units.some(u=>u.kind==='unmapped-letter'),true);
+  assert.equal(x.fluentReviewRequired,true);
+  assert.equal(x.readyForSynthesis,false);
 });
 test('invalid letters cannot become sound through fallback',()=>{
   const x=planSpeechUnits('C Z 9');
