@@ -78,3 +78,39 @@ def test_no_path_leak_on_cli_error(tmp_path, capsys, monkeypatch):
     monkeypatch.setattr(sys, 'argv', ['check_encoded_voice.py', str(secret), str(secret)])
     assert main() == 2
     assert 'private_name' not in capsys.readouterr().out
+
+
+def dc_biased_wav(path, *, dc=.08, amplitude=.00002):
+    """Synthetic electrical offset, not spoken sound."""
+    with wave.open(str(path), 'wb') as out:
+        out.setnchannels(1); out.setsampwidth(2); out.setframerate(16000)
+        out.writeframes(b''.join(struct.pack('<h', round((dc + amplitude * math.sin(2 * math.pi * 220 * i / 16000)) * 32767)) for i in range(16000)))
+    return path
+
+
+def test_dc_biased_nearly_silent_mp3_roundtrip_rejected(tmp_path):
+    src = dc_biased_wav(tmp_path / 'offset.wav')
+    dst = encode(src, tmp_path / 'offset.mp3')
+    result = compare(src, dst)
+    assert result['status'] == 'CODEC_SIGNAL_FAIL'
+    assert 'Original signal is too quiet or mostly silent' in result['problems']
+    assert result['reference_rms_dbfs'] < -38
+    assert result['reference_silent_fraction'] > .85
+
+
+def test_dc_biased_encoded_audio_rejected_with_valid_reference(tmp_path):
+    src = wav(tmp_path / 'audible.wav')
+    biased = dc_biased_wav(tmp_path / 'offset.wav')
+    dst = encode(biased, tmp_path / 'offset.mp3')
+    result = compare(src, dst)
+    assert result['status'] == 'CODEC_SIGNAL_FAIL'
+    assert 'Encoded signal is too quiet or mostly silent' in result['problems']
+
+
+def test_large_dc_offset_rejected_even_when_tone_is_present(tmp_path):
+    src = dc_biased_wav(tmp_path / 'offset.wav', dc=.20, amplitude=.10)
+    dst = encode(src, tmp_path / 'offset.mp3')
+    result = compare(src, dst)
+    assert result['status'] == 'CODEC_SIGNAL_FAIL'
+    assert 'Large DC offset in reference or encoded audio' in result['problems']
+    assert result['reference_dc_offset_fraction'] > .10
