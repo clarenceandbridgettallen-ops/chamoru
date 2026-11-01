@@ -67,17 +67,21 @@ def _pcm_metrics(path):
         samples.byteswap()
     if len(samples) < 4000:
         raise ValueError('Decoded audio is too short')
-    sq = sum(x * x for x in samples)
-    rms = math.sqrt(sq / len(samples)) / 32768
+    # Subtract DC before measuring energy: a constant voltage is not speech.
+    mean = sum(samples) / len(samples)
+    power = max(0.0, sum(x * x for x in samples) / len(samples) - mean * mean)
+    rms = math.sqrt(power) / 32768
     rms_db = round(20 * math.log10(max(rms, 1 / 32768)), 2)
+    dc = round(abs(mean) / 32768, 5)
     quiet = 0
     windows = 0
     for start in range(0, len(samples), 1600):
         block = samples[start:start + 1600]
-        power = sum(x * x for x in block) / len(block)
+        block_mean = sum(block) / len(block)
+        power = max(0.0, sum(x * x for x in block) / len(block) - block_mean * block_mean)
         quiet += math.sqrt(power) / 32768 < 10 ** (-45 / 20)
         windows += 1
-    return rms_db, round(quiet / windows, 4), len(samples) / 16000
+    return rms_db, round(quiet / windows, 4), len(samples) / 16000, dc
 
 
 def compare(original_wav, encoded):
@@ -89,13 +93,15 @@ def compare(original_wav, encoded):
         raise ValueError('Reference must be 16-bit PCM WAV')
     if dst_codec not in ('mp3', 'opus', 'vorbis', 'aac', 'flac', 'pcm_s16le'):
         raise ValueError('Encoded format is not in the reviewed codec allowlist')
-    original_db, original_quiet, original_len = _pcm_metrics(src)
-    decoded_db, decoded_quiet, decoded_len = _pcm_metrics(dst)
+    original_db, original_quiet, original_len, original_dc = _pcm_metrics(src)
+    decoded_db, decoded_quiet, decoded_len, decoded_dc = _pcm_metrics(dst)
     problems = []
     if original_db < -38 or original_quiet > 0.85:
         problems.append('Original signal is too quiet or mostly silent')
     if decoded_db < -38 or decoded_quiet > 0.85:
         problems.append('Encoded signal is too quiet or mostly silent')
+    if original_dc > 0.10 or decoded_dc > 0.10:
+        problems.append('Large DC offset in reference or encoded audio')
     if abs(decoded_db - original_db) > 6:
         problems.append('Encoded level differs from reference by more than 6 dB')
     if abs(dst_duration - src_duration) > 0.30 or abs(decoded_len - original_len) > 0.30:
@@ -105,6 +111,8 @@ def compare(original_wav, encoded):
             'reference_rms_dbfs': original_db, 'encoded_rms_dbfs': decoded_db,
             'reference_silent_fraction': original_quiet,
             'encoded_silent_fraction': decoded_quiet,
+            'reference_dc_offset_fraction': original_dc,
+            'encoded_dc_offset_fraction': decoded_dc,
             'problems': problems,
             'limits': 'No Android/browser decode, speech intelligibility, pronunciation, or rights verification'}
 
