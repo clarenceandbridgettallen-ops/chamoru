@@ -88,5 +88,49 @@ class TestVoiceSignalGate(unittest.TestCase):
         self.assertNotIn(str(self.path), proc.stdout + proc.stderr)
 
 
+
+def synth(path, *, channels=1, dc=.0, amplitude=.2):
+    with wave.open(str(path), 'wb') as wav:
+        wav.setnchannels(channels)
+        wav.setsampwidth(2)
+        wav.setframerate(16000)
+        samples = []
+        for i in range(16000):
+            tone = amplitude * math.sin(2 * math.pi * 220 * i / 16000)
+            for c in range(channels):
+                offset = dc if c == 0 else -dc
+                samples.append(max(-32768, min(32767, round((offset + tone) * 32767))))
+        wav.writeframes(struct.pack('<' + 'h' * len(samples), *samples))
+
+
+class TestDcBiasedAudioGate(unittest.TestCase):
+    def test_dc_biased_near_silence_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/'signal.wav'
+            synth(p,dc=.08,amplitude=.00002)
+            result=analyze(p)
+            self.assertEqual(result['status'],'SIGNAL_FAIL')
+            self.assertIn('RMS signal is too quiet',result['problems'])
+            self.assertIn('Mostly silent 100ms windows',result['problems'])
+            self.assertLess(result['ac_rms_dbfs'],-38)
+
+    def test_opposite_stereo_dc_offsets_detected(self):
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/'signal.wav'
+            synth(p,channels=2,dc=.2,amplitude=.00002)
+            result=analyze(p)
+            self.assertEqual(result['status'],'SIGNAL_FAIL')
+            self.assertIn('Large DC offset',result['problems'])
+            self.assertLess(result['ac_rms_dbfs'],-38)
+
+    def test_actual_ac_sine_still_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/'signal.wav'
+            synth(p,dc=.02,amplitude=.2)
+            result=analyze(p)
+            self.assertEqual(result['status'],'SIGNAL_PASS_PRONUNCIATION_UNVERIFIED')
+            self.assertGreater(result['ac_rms_dbfs'],-25)
+
+
 if __name__ == '__main__':
     unittest.main()
