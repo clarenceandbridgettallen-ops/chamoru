@@ -11,7 +11,13 @@
  */
 'use strict';
 const { tokenizeWrittenCHamoru } = require('./segment_chamoru_graphemes');
-const CANDIDATES = Object.freeze({ch: 't͡s', ng: 'ŋ'});
+// Sandra Chung, Chamorro Grammar (2020), §29.1-29.2: six contrastive
+// vowel classes and written symbols (a, å, e, i, o, u). These are only
+// isolated phoneme-class hypotheses, NOT surface pronunciation. Guam spelling
+// may retain e/o in unstressed syllables pronounced with higher vowels;
+// stress, glides, dialect variants and word-level rules remain UNMAPPED.
+// https://kumisionchamoru.guam.gov/wp-content/uploads/2024/07/chamorro_grammar_dr._sandra_chung.pdf
+const CANDIDATES = Object.freeze({ch: 't͡s', ng: 'ŋ', a: 'a', å: 'ɒ', e: 'e', i: 'i', o: 'o', u: 'u'});
 const STRESS_BASE = Object.freeze({'á':'a','ǻ':'å','é':'e','í':'i','ó':'o','ú':'u'});
 function planSpeechUnits(input) {
   const written = tokenizeWrittenCHamoru(input);
