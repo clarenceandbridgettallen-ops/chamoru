@@ -48,9 +48,10 @@ def render_samples(rate: int = RATE) -> list[int]:
 
 
 def write_demo_wav(path: str | Path) -> dict:
-    """Write original mono PCM16. No app or microphone is accessed."""
+    """Write original mono PCM16 to a NEW file only; never overwrite."""
     samples = render_samples()
-    with wave.open(str(path), 'wb') as out:
+    # Exclusive creation also refuses existing symlinks and prevents races.
+    with Path(path).open('xb') as stream, wave.open(stream, 'wb') as out:
         out.setnchannels(1)
         out.setsampwidth(2)
         out.setframerate(RATE)
