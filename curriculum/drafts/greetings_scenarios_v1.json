@@ -1,0 +1,80 @@
+{
+  "schema": "chamoru-scenario-draft-v1",
+  "id": "greetings-context-and-independent-recall-v1",
+  "status": "DRAFT_NOT_LIVE_FLUENT_REVIEW_REQUIRED",
+  "source_draft": "greetings_recall_v1.json",
+  "publish_approved": false,
+  "audio_status": "NO_APPROVED_SPOKEN_AUDIO",
+  "pronunciation_status": "NOT_REVIEWED",
+  "cultural_context_status": "NOT_REVIEWED",
+  "notes": "Original English learning scenarios using only indexed phrases from the existing unapproved 16-phrase draft. Dialogue ordering, appropriateness, variants, translations and spelling require fluent review. These are NOT live lessons, audio scripts or evidence of CHamoru accuracy.",
+  "preserve": [
+    "saved_progress",
+    "xp",
+    "shells",
+    "mastery_gates",
+    "games",
+    "reader",
+    "culture_library",
+    "back_next"
+  ],
+  "practice_modes": [
+    "context_recognition",
+    "independent_english_meaning",
+    "independent_chamoru_recall",
+    "dialogue_order_reconstruction"
+  ],
+  "help_policy": "Offer a hint about task instructions, never a submitted independent-answer key.",
+  "quarantined_phrase_indices": [
+    5
+  ],
+  "scenarios": [
+    {
+      "id": "morning_meeting",
+      "title": "A morning meeting",
+      "english_context": "Two neighbors meet in the morning, exchange greetings, and express thanks.",
+      "phrase_indices": [
+        13,
+        0,
+        3,
+        12,
+        6
+      ],
+      "independent_prompt": "After the context disappears, recall a greeting and a courteous closing without choosing from a list."
+    },
+    {
+      "id": "friendly_arrival",
+      "title": "A friendly arrival",
+      "english_context": "A visitor is greeted and someone asks a simple question. Dialogue order is provisional.",
+      "phrase_indices": [
+        1,
+        2,
+        4,
+        7
+      ],
+      "independent_prompt": "Identify which expression asks for a name, then type its meaning from memory."
+    },
+    {
+      "id": "afternoon_choice",
+      "title": "An afternoon exchange",
+      "english_context": "Practice recognizing a time-of-day greeting and distinguishing affirmative and negative replies. Dialogue order is provisional.",
+      "phrase_indices": [
+        14,
+        8,
+        9
+      ],
+      "independent_prompt": "Recall both response words without seeing the CHamoru spelling."
+    },
+    {
+      "id": "evening_farewell",
+      "title": "An evening goodbye",
+      "english_context": "Two people end an evening encounter with farewell expressions. Dialogue order is provisional.",
+      "phrase_indices": [
+        15,
+        10,
+        11
+      ],
+      "independent_prompt": "Reconstruct a possible farewell sequence, then type the meaning of each phrase."
+    }
+  ]
+}
