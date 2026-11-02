@@ -4,6 +4,8 @@ on:
     paths:
       - index.html
       - voice-studio.js
+      - curriculum/drafts/orthography_foundations_v1.json
+      - scripts/test_orthography_draft.mjs
       - scripts/test_voice_studio.js
       - scripts/test_family_words.js
       - scripts/test_media_library.js
@@ -13,6 +15,8 @@ on:
     paths:
       - index.html
       - voice-studio.js
+      - curriculum/drafts/orthography_foundations_v1.json
+      - scripts/test_orthography_draft.mjs
       - scripts/test_voice_studio.js
       - scripts/test_family_words.js
       - scripts/test_media_library.js
@@ -29,3 +33,4 @@ jobs:
         with:
           node-version: '22'
       - run: node --test scripts/test_phoneme_audio.js scripts/test_voice_studio.js scripts/test_family_words.js scripts/test_media_library.js
+      - run: node scripts/test_orthography_draft.mjs
