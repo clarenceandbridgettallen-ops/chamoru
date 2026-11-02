@@ -1,0 +1,115 @@
+{
+  "schema": "chamoru-orthography-foundations-draft-v1",
+  "id": "orthography-foundations-review-v1",
+  "status": "DRAFT_NOT_LIVE_FLUENT_REVIEW_REQUIRED",
+  "publish_approved": false,
+  "audio_status": "NO_APPROVED_SPOKEN_AUDIO",
+  "pronunciation_status": "NOT_REVIEWED",
+  "locale_scope": "Guam official orthography; CNMI differences require separate review",
+  "rights": "Original English exercise prompts; sources linked for reference only; no media or source text copied",
+  "source_links": [
+    "https://kumisionchamoru.guam.gov/chamorro-grammar-as-dr-sandra-chung/",
+    "https://kumisionchamoru.guam.gov/prudukto-siha-products/i-fanselabayan-syllabary-tiles/",
+    "https://kumisionchamoru.guam.gov/listan-palabra-word-lists/"
+  ],
+  "preserve": [
+    "saved_progress",
+    "mastery_gates",
+    "games",
+    "dialogues",
+    "reader",
+    "culture_library",
+    "rewards",
+    "back_next"
+  ],
+  "help_policy": "Give instructions or an unrelated worked example only; do not reveal independent answers.",
+  "lessons": [
+    {
+      "id": "writing_system",
+      "title": "Meet the writing system",
+      "objective": "Recognize that CHamoru has a documented spelling system and that pronunciation needs a separate listening lesson.",
+      "source_index": 0,
+      "practice": [
+        {
+          "mode": "recognition",
+          "prompt": "Find the word in this lesson that names the CHamoru spelling system: orthography, calendar, or recipe."
+        },
+        {
+          "mode": "explanation",
+          "prompt": "In your own words, explain why spelling rules and pronunciation recordings are different kinds of evidence."
+        },
+        {
+          "mode": "independent_recall",
+          "prompt": "With the choices hidden, name the type of reference you would check before changing a written CHamoru word."
+        }
+      ]
+    },
+    {
+      "id": "vowel_symbols",
+      "title": "Six written vowel symbols",
+      "objective": "Recognize the written vowel symbols a, å, e, i, o, u without guessing how they sound.",
+      "source_index": 0,
+      "practice": [
+        {
+          "mode": "recognition",
+          "prompt": "Find the vowel with a ring above it in this group: a, å, e."
+        },
+        {
+          "mode": "classification",
+          "prompt": "From a, å, e, i, o, u, sort the two a-shaped symbols separately."
+        },
+        {
+          "mode": "independent_recall",
+          "prompt": "Without looking at the examples, write all six vowel symbols used in the referenced spelling description."
+        }
+      ]
+    },
+    {
+      "id": "single_ch_letter",
+      "title": "CH is one letter",
+      "objective": "Understand that CH represents one letter in the referenced official alphabet.",
+      "source_index": 0,
+      "practice": [
+        {
+          "mode": "recognition",
+          "prompt": "When reading the official alphabet, should CH be treated as one letter or two? Explain what source you checked."
+        },
+        {
+          "mode": "comparison",
+          "prompt": "Compare the letter count of CH with the two visible characters used to write it."
+        },
+        {
+          "mode": "independent_recall",
+          "prompt": "After hiding the explanation, describe how CH is treated in the referenced spelling system."
+        }
+      ]
+    },
+    {
+      "id": "syllables_and_variants",
+      "title": "Syllables and spelling variation",
+      "objective": "Distinguish syllable-aware spelling study from claims of correct pronunciation, and recognize that Guam and CNMI conventions can differ.",
+      "source_index": 1,
+      "practice": [
+        {
+          "mode": "context",
+          "prompt": "Why might a beginner need to study syllable boundaries before attempting to read a longer word?"
+        },
+        {
+          "mode": "comparison",
+          "prompt": "Two references spell the same word differently. Name one responsible check before labeling either spelling wrong."
+        },
+        {
+          "mode": "independent_recall",
+          "prompt": "Without hints, state two things a fluent reviewer should verify before this lesson becomes graded."
+        }
+      ]
+    }
+  ],
+  "review_gates": [
+    "fluent_speaker_written_review",
+    "official_orthography_alignment",
+    "independent_recall_pilot",
+    "no_audio_release_without_pronunciation_review",
+    "physical_android_qa_before_learner_rollout"
+  ]
+}
